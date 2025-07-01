@@ -1,0 +1,1 @@
+from .processed_applicant import ProcessedApplicant
