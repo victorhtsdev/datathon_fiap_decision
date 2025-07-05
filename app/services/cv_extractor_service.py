@@ -14,48 +14,45 @@ SAVE_LOGS = os.getenv("SAVE_LOGS", "False").lower() == "true"
 
 OLLAMA_MODEL = settings.OLLAMA_MODEL
 
-ordem_niveis = {
+education_level_order = {
     "ensino médio": 1, "técnico": 2, "tecnólogo": 4, "especialização": 3, "graduação": 5,
     "bacharel": 6,"pós-graduação": 7, "MBA": 8, "mestrado": 9, "doutorado": 10, "certificacao": 0
 }
 
-VALID_NIVEIS_IDIOMA = {"básico", "intermediário", "avançado", "fluente", "nativo"}
+VALID_LANGUAGE_LEVELS = {"básico", "intermediário", "avançado", "fluente", "nativo"}
 
 def remove_ansi(text):
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     return ansi_escape.sub('', text)
 
 
-def corrigir_espacamento_letras(texto):
-    def corrigir_linha(linha):
-        return re.sub(r'((?:[A-Za-zÀ-ÿ]\s){3,}[A-Za-zÀ-ÿ])', lambda m: m.group(0).replace(' ', ''), linha)
-    
-    return '\n'.join(corrigir_linha(l) for l in texto.splitlines())
+def fix_letter_spacing(text):
+    def fix_line(line):
+        return re.sub(r'((?:[A-Za-zÀ-ÿ]\s){3,}[A-Za-zÀ-ÿ])', lambda m: m.group(0).replace(' ', ''), line)
+    return '\n'.join(fix_line(l) for l in text.splitlines())
 
 
 def split_chunks(text, size=CHUNK_SIZE):
     chunks = [text[i:i+size] for i in range(0, len(text), size)]
     if DEBUG:
-        print(f"🔹 Total de chunks gerados: {len(chunks)}")
+        print(f"🔹 Total chunks generated: {len(chunks)}")
         for i, chunk in enumerate(chunks):
-            print(f"  - Chunk {i+1} tamanho: {len(chunk)} caracteres")
+            print(f"  - Chunk {i+1} size: {len(chunk)} characters")
     return chunks
-
 
 MAX_RETRIES = 10
 
-
-def salvar_logs(nome_base, conteudo):
+def save_logs(base_name, content):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"logs/{nome_base}_{timestamp}.txt"
+    filename = f"logs/{base_name}_{timestamp}.txt"
     os.makedirs("logs", exist_ok=True)
     with open(filename, "w", encoding="utf-8") as f:
-        f.write(conteudo)
+        f.write(content)
 
-def remove_duplicates(lista, keys):
+def remove_duplicates(lst, keys):
     seen = set()
     uniques = []
-    for item in lista:
+    for item in lst:
         key = tuple(str(item.get(k, "")).strip().lower() for k in keys)
         if key not in seen:
             seen.add(key)
@@ -64,7 +61,7 @@ def remove_duplicates(lista, keys):
 
 
 def extract_section(applicant_id, section_name, schema_snippet, cv_text):
-    cv_text = corrigir_espacamento_letras(cv_text)
+    cv_text = fix_letter_spacing(cv_text)
     prompt_base = build_prompt(section_name, schema_snippet, cv_text)
 
     chunks = split_chunks(cv_text)
@@ -77,58 +74,58 @@ def extract_section(applicant_id, section_name, schema_snippet, cv_text):
             continue
         seen_chunks.add(chunk_key)
 
-        print(f"🧩 Processando chunk {i+1}/{len(chunks)} com {len(chunk)} caracteres")
+        print(f"🧩 Processing chunk {i+1}/{len(chunks)} with {len(chunk)} characters")
         prompt = f"{prompt_base}\n\nCurrículo (parte {i+1}/{len(chunks)}):\n{chunk}"
 
         if DEBUG:
-            print(f"📤 Prompt enviado ao modelo:\n{prompt}")
+            print(f"📤 Prompt sent to model:\n{prompt}")
             if SAVE_LOGS:
-                salvar_logs(f"prompt_chunk{i+1}", prompt)
+                save_logs(f"prompt_chunk{i+1}", prompt)
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                prompt_atual = prompt
+                prompt_current = prompt
                 output = subprocess.check_output(
                     ["ollama", "run", OLLAMA_MODEL, "--think=false"],
-                    input=prompt_atual.encode("utf-8"),
+                    input=prompt_current.encode("utf-8"),
                     stderr=subprocess.STDOUT,
                     timeout=300
                 ).decode("utf-8")
 
                 if DEBUG:
-                    print(f"📥 Resposta do modelo:\n{output}")
+                    print(f"📥 Model response:\n{output}")
                     if SAVE_LOGS:
-                        salvar_logs(f"resposta_chunk{i+1}", output)
+                        save_logs(f"resposta_chunk{i+1}", output)
 
                 if "{" not in output or "}" not in output:
-                    raise ValueError("❌ A resposta não contém JSON.")
+                    raise ValueError("❌ The response does not contain JSON.")
 
                 raw_json = remove_ansi(output[output.find('{'):output.rfind('}') + 1]).strip()
 
                 try:
                     parsed = json.loads(raw_json)
                 except json.JSONDecodeError as e:
-                    print(f"⚠️ Tentando ajuste adaptativo devido a erro de parsing: {e}")
-                    prompt_reparo = (
+                    print(f"⚠️ Trying adaptive fix due to parsing error: {e}")
+                    prompt_fix = (
                         f"{prompt_base}\n\n"
                         f"Currículo (parte {i+1}/{len(chunks)}):\n{chunk}\n\n"
-                        f"⚠️ A resposta anterior gerou o erro:\n{str(e)}\n"
-                        f"Por favor, corrija e retorne um JSON válido com a chave '{section_name}'."
+                        f"⚠️ The previous response generated the error:\n{str(e)}\n"
+                        f"Please correct and return a valid JSON with the key '{section_name}'."
                     )
 
                     if SAVE_LOGS:
                         os.makedirs("logs", exist_ok=True)
                         clean_output = remove_ansi(output)
                         log_data = (
-                            f"applicant_id={applicant_id} | Erro de parsing: {str(e)}\n"
-                            f"Resposta que falhou:\n{clean_output}\n\n"
+                            f"applicant_id={applicant_id} | Parsing error: {str(e)}\n"
+                            f"Failed response:\n{clean_output}\n\n"
                         )
-                        log_filename = os.path.join("logs", f"reparo_prompt_{datetime.now().date()}.log")
+                        log_filename = os.path.join("logs", f"fix_prompt_{datetime.now().date()}.log")
                         with open(log_filename, "a", encoding="utf-8") as f:
                             f.write(log_data)
                         output = subprocess.check_output(
                             ["ollama", "run", OLLAMA_MODEL, "--think=false"],
-                            input=prompt_reparo.encode("utf-8"),
+                            input=prompt_fix.encode("utf-8"),
                             stderr=subprocess.STDOUT,
                             timeout=120
                         ).decode("utf-8")
@@ -139,12 +136,12 @@ def extract_section(applicant_id, section_name, schema_snippet, cv_text):
                 if isinstance(parsed, list):
                     parsed = {section_name: parsed}
 
-                # --- AJUSTE DE CAMPOS PARA EXPERIENCIAS ---
+                # --- FIELD ADJUSTMENT FOR EXPERIENCES ---
                 if section_name == "experiencias":
-                    experiencias = parsed.get("experiencias", [])
-                    for exp in experiencias:
-                        # Corrige nomes de campos para o schema padronizado
-                        # Aceita variações: data_fim, data fim, data_inicio, data inicio
+                    experiences = parsed.get("experiencias", [])
+                    for exp in experiences:
+                        # Fix field names for the standardized schema
+                        # Accepts variations: data_fim, data fim, data_inicio, data inicio
                         if "data_fim" in exp:
                             exp["fim"] = exp.pop("data_fim")
                         if "data fim" in exp:
@@ -155,12 +152,10 @@ def extract_section(applicant_id, section_name, schema_snippet, cv_text):
                             exp["inicio"] = exp.pop("data inicio")
 
                 combined_data.extend(parsed.get(section_name, []))
-                break  # Sucesso
+                break  # Success
 
             except Exception as e:
-                print(f"⚠️ Erro ao extrair '{section_name}' do chunk {i+1} (tentativa {attempt}): {e}")
-                if attempt == MAX_RETRIES and SAVE_LOGS:
-                    salvar_logs(f"erro_chunk{i+1}", output)
+                print(f"⚠️ Error extracting '{section_name}' from chunk {i+1} (attempt {attempt}): {e}")
 
     if section_name == "formacoes":
         combined_data = remove_duplicates(combined_data, ["curso", "instituicao", "ano_inicio", "ano_fim"])
@@ -186,7 +181,7 @@ def language_was_mentioned(cv_text, language):
         return False
     return re.search(rf"\b{re.escape(str(language))}\b", cv_text, re.IGNORECASE)
 
-# Função para processar um único candidato (usada na API)
+# Function to process a single applicant (used in the API)
 def process_single_applicant(applicant_dict):
     import time
     from app.models.processed_applicant import ProcessedApplicant
@@ -212,7 +207,7 @@ def process_single_applicant(applicant_dict):
         if not isinstance(language, dict):
             continue
         level = (language.get("nivel") or "").strip().lower()
-        language["nivel"] = level if level in VALID_NIVEIS_IDIOMA else ""
+        language["nivel"] = level if level in VALID_LANGUAGE_LEVELS else ""
     languages["idiomas"] = [
         language for language in languages.get("idiomas", [])
         if isinstance(language, dict) and language_was_mentioned(cv_text, language.get("idioma", ""))
@@ -229,12 +224,12 @@ def process_single_applicant(applicant_dict):
         (f.get("nivel") or "").strip().lower()
         for f in final_json.get("formacoes", [])
         if (
-            (f.get("nivel") or "").strip().lower() in ordem_niveis and
+            (f.get("nivel") or "").strip().lower() in education_level_order and
             not ((f.get("observacoes") or "").strip().lower() in {"trancado", "em andamento", "interrompida"})
         )
     ]
     if levels:
-        max_education_level = max(levels, key=lambda x: ordem_niveis[x])
+        max_education_level = max(levels, key=lambda x: education_level_order[x])
     print("📦 Final JSON to be inserted in the database:")
     print(json.dumps(final_json, indent=2, ensure_ascii=False))
     return final_json, max_education_level
