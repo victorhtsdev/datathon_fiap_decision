@@ -20,5 +20,20 @@ class OllamaClient(LLMClient):
         ).decode("utf-8")
         if self.console_log:
             print(f"[OllamaClient] Model response received for section '{section_name}'. Response size: {len(output)} chars")
+
+        # ⚠️ Preserva comportamento anterior para JSON
         raw_json = output[output.find('{'):output.rfind('}') + 1]
         return json.loads(raw_json)
+
+    def extract_text(self, prompt: str) -> str:
+        if self.console_log:
+            print(f"[OllamaClient] Sending raw prompt to model '{self.model_name}'. Prompt size: {len(prompt)} chars")
+        output = subprocess.check_output(
+            ["ollama", "run", self.model_name, "--think=false"],
+            input=prompt.encode("utf-8"),
+            stderr=subprocess.STDOUT,
+            timeout=300
+        ).decode("utf-8")
+        if self.console_log:
+            print(f"[OllamaClient] Model raw response received. Response size: {len(output)} chars")
+        return output.strip()

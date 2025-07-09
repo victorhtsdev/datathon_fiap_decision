@@ -1,10 +1,11 @@
 from fastapi import FastAPI
-from app.routers import applicant_router
+from app.routers import applicant_router, vaga_router
 from app.llm.factory import get_llm_client
 
 app = FastAPI()
 
 app.include_router(applicant_router)
+app.include_router(vaga_router)
 
 if __name__ == "__main__":
     # Exemplo de uso
