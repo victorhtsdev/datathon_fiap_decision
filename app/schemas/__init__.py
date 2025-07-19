@@ -1,1 +1,0 @@
-from .applicant import ApplicantIn

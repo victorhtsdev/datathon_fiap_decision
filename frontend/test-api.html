@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Teste de API</h1>
+    <button onclick="testAPI()">Testar /vagas/lista</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testando...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/vagas/lista');
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <h2>Sucesso!</h2>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h2>Erro:</h2>
+                    <p style="color: red;">${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
