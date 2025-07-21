@@ -17,34 +17,36 @@ class VagaProcessingOrchestrator:
             
             vaga_existente = get_vaga_by_id(db, vaga_id)
             if vaga_existente:
-                log_info(f"[Orchestrator] Updating existing vaga {vaga_id} status to 'em_andamento'")
-                # Atualiza status para "em_andamento" no início do processamento
-                update_vaga(db, vaga_id, VagaUpdate(), {"status_vaga": StatusVaga.em_andamento})
+                log_info(f"[Orchestrator] Processing existing vaga {vaga_id}")
+                # Não força mudança de status para vaga existente, mantém o atual
                 
                 # Initialize extractor only when needed
                 extractor = VagaExtractorService()
                 extractor.processar_vaga(db, vaga_id, vaga_dict)
                 
-                # Atualiza status para "finalizada" após o processamento
-                log_info(f"[Orchestrator] Updating vaga {vaga_id} status to 'finalizada'")
-                update_vaga(db, vaga_id, VagaUpdate(), {"status_vaga": StatusVaga.finalizada})
+                # Não atualiza status automaticamente após processamento
+                log_info(f"[Orchestrator] Finished processing existing vaga {vaga_id}")
             else:
                 log_info(f"[Orchestrator] Creating new vaga {vaga_id}")
-                db_vaga = create_vaga(db, VagaCreate(**vaga_dict), {"status_vaga": StatusVaga.em_andamento})
+                # Cria nova vaga com status padrão 'nao_iniciada' (a menos que seja especificado no vaga_dict)
+                status_inicial = vaga_dict.get('status_vaga', StatusVaga.nao_iniciada)
+                db_vaga = create_vaga(db, VagaCreate(**vaga_dict), {"status_vaga": status_inicial})
                 db.commit()
                 if db_vaga.id:
                     # Initialize extractor only when needed
                     extractor = VagaExtractorService()
                     extractor.processar_vaga(db, db_vaga.id, vaga_dict)
                     
-                    # Atualiza status para "finalizada" após o processamento
-                    log_info(f"[Orchestrator] Updating new vaga {db_vaga.id} status to 'finalizada'")
-                    update_vaga(db, db_vaga.id, VagaUpdate(), {"status_vaga": StatusVaga.finalizada})
+                    # Não força mudança de status após processamento
+                    log_info(f"[Orchestrator] Finished processing new vaga {db_vaga.id}")
                 else:
                     log_error(f"[Orchestrator] Failed to create vaga, no ID returned")
 
         except Exception as e:
-            log_error(f"[Orchestrator] Error processing vaga {vaga_id}: {e}\n{traceback.format_exc()}")
+            log_error(f"[Orchestrator] Error processing vaga {vaga_id}: {e}")
+            # Add detailed debug info
+            log_error(f"[Orchestrator] StatusVaga enum values: {[e.value for e in StatusVaga]}")
+            log_error(f"[Orchestrator] Traceback: {traceback.format_exc()}")
         finally:
             db.close()
             log_info(f"[Orchestrator] Finished processing vaga {vaga_id}")

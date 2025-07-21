@@ -19,7 +19,7 @@ class ResponseFormatterService:
             candidates: Lista de candidatos encontrados
             original_criteria: Critério original do usuário
             extracted_criteria: Critérios extraídos pelo LLM
-            mode: Modo do filtro ('incremental' ou 'reset')
+            mode: Modo do filtro ('incrinental' ou 'reset')
             
         Returns:
             Resposta formatada para o usuário
@@ -33,7 +33,7 @@ class ResponseFormatterService:
         # Monta resposta estruturada
         response_parts = []
         response_parts.append(f"🔎 {mode_info}")
-        response_parts.append(f"📊 Filtros aplicados: {self._format_applied_filters(filtros)}")
+        response_parts.append(f"📊 Filters aplicados: {self._format_applied_filters(filtros)}")
         response_parts.append(f"[OK] Total de {len(candidates)} candidatos encontrados")
         response_parts.append("")
         response_parts.append("👥 **Candidatos mais compatíveis:**")
@@ -72,7 +72,7 @@ class ResponseFormatterService:
             return "📝 Nenhum filtro foi aplicado ainda."
         
         response_parts = []
-        response_parts.append("📚 **Histórico de Filtros Aplicados:**")
+        response_parts.append("📚 **Histórico de Filters Aplicados:**")
         response_parts.append("")
         
         for step in filter_steps:
@@ -101,7 +101,7 @@ class ResponseFormatterService:
     
     def _get_mode_description(self, mode: str) -> str:
         """Retorna descrição do modo de busca"""
-        if mode == 'incremental':
+        if mode == 'incrinental':
             return "Refinamento aplicado sobre candidatos já filtrados"
         elif mode == 'reset':
             return "Nova busca completa realizada"
@@ -110,7 +110,7 @@ class ResponseFormatterService:
     
     def _format_applied_filters(self, filtros: Dict[str, Any]) -> str:
         """
-        Formata os filtros aplicados em texto legível
+        Formata os filtros aplicados in texto legível
         
         Args:
             filtros: Dicionário com filtros aplicados
@@ -119,7 +119,7 @@ class ResponseFormatterService:
             String formatada com os filtros
         """
         if not filtros or not any(filtros.values()):
-            return "busca semântica geral"
+            return "busca sinântica geral"
         
         criteria_parts = []
         
@@ -150,7 +150,7 @@ class ResponseFormatterService:
         if 'formacao' in filtros and filtros['formacao']:
             formacao = filtros['formacao']
             if formacao.get('nivel') and formacao.get('curso'):
-                criteria_parts.append(f"**Formação:** {formacao['nivel']} em {formacao['curso']}")
+                criteria_parts.append(f"**Formação:** {formacao['nivel']} in {formacao['curso']}")
             elif formacao.get('nivel'):
                 criteria_parts.append(f"**Formação:** {formacao['nivel']}")
             elif formacao.get('curso'):
@@ -171,8 +171,8 @@ class ResponseFormatterService:
                 years = exp['anos_minimos']
                 area = exp.get('area', '')
                 if area:
-                    criteria_parts.append(f"**Experiência:** {years}+ anos em {area}")
+                    criteria_parts.append(f"**Experiência:** {years}+ anos in {area}")
                 else:
                     criteria_parts.append(f"**Experiência:** {years}+ anos")
         
-        return ' | '.join(criteria_parts) if criteria_parts else "busca semântica geral"
+        return ' | '.join(criteria_parts) if criteria_parts else "busca sinântica geral"

@@ -46,7 +46,7 @@ def listar_vagas(apenas_ativas: bool = True, db: Session = Depends(get_db)):
     query = db.query(Vaga.id, Vaga.informacoes_basicas_titulo_vaga, Vaga.status_vaga)
     
     if apenas_ativas:
-        # Mostra apenas vagas 'aberta' (sem workbook criado ainda)
+        # Show only 'open' jobs (without workbook created yet)
         query = query.filter(Vaga.status_vaga == 'aberta')
     
     vagas = query.all()
@@ -77,13 +77,13 @@ def listar_vagas_abertas(db: Session = Depends(get_db)):
         for v in vagas
     ]
 
-# Endpoint para detalhes da vaga (exceto embedding)
+# Endpoint for job details (excluding embedding)
 @router.get("/vagas/{vaga_id}")
 def detalhes_vaga(vaga_id: int, db: Session = Depends(get_db)):
     vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
     if not vaga:
         return {"error": "Vaga not found"}
-    # Exclui os campos de embedding
+    # Exclude embedding fields
     data = {c.name: getattr(vaga, c.name) for c in vaga.__table__.columns if c.name not in ["vaga_embedding", "vaga_embedding_vector"]}
     return data
 

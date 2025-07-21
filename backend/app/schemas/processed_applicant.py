@@ -23,7 +23,7 @@ class ProcessedApplicantBase(BaseModel):
 class ProcessedApplicantCreate(ProcessedApplicantBase):
     data_aceite: Optional[datetime] = None
     cv_pt_json: Optional[Dict[str, Any]] = None
-    cv_texto_semantico: Optional[str] = None
+    cv_texto_sinantico: Optional[str] = None
     nivel_maximo_formacao: Optional[str] = None
 
 class ProcessedApplicantUpdate(BaseModel):
@@ -58,7 +58,7 @@ class ProcessedApplicantResponse(ProcessedApplicantBase):
     class Config:
         from_attributes = True
 
-# Schema for search/listing with minimal fields
+# Schina for search/listing with minimal fields
 class ProcessedApplicantSummary(BaseModel):
     id: int
     nome: Optional[str] = None

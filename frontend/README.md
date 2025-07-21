@@ -1,4 +1,82 @@
-# React + TypeScript + Vite
+## Licença
+
+Este projeto está licenciado sob a Licença MIT. Veja o arquivo LICENSE para mais detalhes.
+## Variáveis de Ambiente
+
+Para integração correta com o backend, configure as variáveis de ambiente no arquivo `.env` do backend, usando valores genéricos como exemplo:
+
+```env
+LLM_BACKEND=ollama
+OLLAMA_MODEL=seu_modelo_aqui
+DEEPSEEK_API_KEY=sk-sua-chave-aqui
+DATABASE_URL=postgresql://usuario:senha@localhost:5432/seu_banco
+CHUNK_SIZE=5000
+DEBUG=True
+SAVE_LOGS=false
+APP_LOG_ENABLED=true
+APP_LOG_LEVEL=INFO
+APP_LOG_FILE=app.log
+LLM_LOG=True
+OPENAI_API_KEY="sk-sua-chave-openai-aqui"
+```
+
+Certifique-se de ajustar as chaves e URLs conforme seu ambiente, nunca expondo dados sensíveis em arquivos públicos.
+# Frontend - Datathon Decision
+
+Este frontend foi desenvolvido em React com Vite e Tailwind CSS, proporcionando uma interface moderna para interação com as APIs do backend.
+
+## Funcionalidades
+
+- Visualização e filtragem de candidatos
+- Consulta e gerenciamento de vagas
+- Chat com LLM para análise semântica
+- Dashboard de performance
+
+## Instalação
+
+1. Instale as dependências:
+   ```bash
+   npm install
+   ```
+2. Execute o frontend:
+   ```bash
+   npm run dev
+   ```
+
+## Estrutura de Pastas
+- `src/components/`: Componentes React reutilizáveis
+- `src/services/`: Integração com APIs do backend
+- `src/hooks/`: Hooks customizados
+- `src/types/`: Tipos TypeScript
+- `public/`: Assets públicos
+
+## Exemplos de Uso
+- Para consultar candidatos:
+  ```js
+  import { getApplicants } from './services/api';
+  getApplicants().then(...);
+  ```
+- Para enviar mensagem ao chat:
+  ```js
+  import { sendChatMessage } from './services/chat';
+  sendChatMessage('Quais vagas estão abertas?').then(...);
+  ```
+
+## Dependências
+- React
+- Vite
+- Tailwind CSS
+- Axios
+- Outros (ver `package.json`)
+
+## Testes
+Execute os testes com:
+```bash
+npm test
+```
+
+## Documentação
+Consulte o backend para detalhes dos endpoints disponíveis.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

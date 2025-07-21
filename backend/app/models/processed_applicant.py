@@ -2,29 +2,46 @@ from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, LargeBi
 from sqlalchemy.dialects.postgresql import JSONB
 from app.core.database import Base
 
+
 class ProcessedApplicant(Base):
+    """
+    Model representing processed applicant data with semantic analysis.
+    
+    This table stores comprehensive applicant information including personal data,
+    CV processing results, and semantic embeddings for candidate matching.
+    """
     __tablename__ = "processed_applicants"
+    
+    # Primary key
     id = Column(Integer, primary_key=True, index=True)
-    data_aceite = Column(DateTime)  # acceptance_date
-    nome = Column(String)  # name
-    cpf = Column(String)
-    fonte_indicacao = Column(String)  # referral_source
-    email = Column(String)
-    email_secundario = Column(String)  # secondary_email
-    data_nascimento = Column(String)  # birth_date
-    telefone_celular = Column(String)  # mobile_phone
-    telefone_recado = Column(String)  # message_phone
-    sexo = Column(String)  # gender
-    estado_civil = Column(String)  # marital_status
-    pcd = Column(Boolean)
-    endereco = Column(String)  # address
-    skype = Column(String)
-    url_linkedin = Column(String)
-    facebook = Column(String)
-    download_cv = Column(String)
-    cv_pt_json = Column(JSONB)
-    cv_texto_semantico = Column(Text)
-    cv_embedding = Column(LargeBinary)
-    nivel_maximo_formacao = Column(String)  # max_education_level
-    cv_embedding_vector = Column(Text)  # Use Text as a placeholder for VECTOR
-    updated_at = Column(DateTime)
+    
+    # Personal information fields
+    data_aceite = Column(DateTime)  # Acceptance date
+    nome = Column(String)  # Full name
+    cpf = Column(String)  # Brazilian tax ID
+    fonte_indicacao = Column(String)  # Referral source
+    email = Column(String)  # Primary email
+    email_secundario = Column(String)  # Secondary email
+    data_nascimento = Column(String)  # Birth date
+    telefone_celular = Column(String)  # Mobile phone
+    telefone_recado = Column(String)  # Message phone
+    sexo = Column(String)  # Gender
+    estado_civil = Column(String)  # Marital status
+    pcd = Column(Boolean)  # Disability status
+    endereco = Column(String)  # Address
+    
+    # Social media and professional profiles
+    skype = Column(String)  # Skype username
+    url_linkedin = Column(String)  # LinkedIn profile URL
+    facebook = Column(String)  # Facebook profile
+    
+    # CV and document processing fields
+    download_cv = Column(String)  # CV download link or path
+    cv_pt_json = Column(JSONB)  # CV data in JSON format
+    cv_texto_semantico = Column(Text)  # Semantic text representation of CV
+    cv_embedding = Column(LargeBinary)  # Binary embedding data
+    nivel_maximo_formacao = Column(String)  # Maximum education level
+    cv_embedding_vector = Column(Text)  # Vector embedding as text placeholder
+    
+    # Metadata fields
+    updated_at = Column(DateTime)  # Last update timestamp

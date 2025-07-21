@@ -6,7 +6,7 @@ import uuid
 class MatchProspectBase(BaseModel):
     applicant_id: int
     score_semantico: Optional[float] = None
-    origem: Optional[str] = None
+    origin: Optional[str] = None
     selecionado: Optional[bool] = False
     observacoes: Optional[str] = None
 

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Send, User, MapPin, Phone, Mail, Calendar, GraduationCap, Briefcase, Star, ChevronDown, ChevronUp, Bot, MessageCircle, Trash2, FileText, Target, Users, AlertCircle, Globe } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Send, User, MapPin, Phone, Mail, Calendar, GraduationCap, Briefcase, Star, ChevronDown, ChevronUp, Bot, MessageCircle, Trash2, FileText, Target, Users, AlertCircle, Globe, Save, CheckCircle, RotateCcw } from 'lucide-react';
 import { apiService } from '../services/api';
-import type { Workbook, Applicant, ChatMessage } from '../types/api';
+import type { Workbook, Applicant, ChatMessage, MatchProspectData } from '../types/api';
 
 interface WorkbookDetailsProps {
   workbook: Workbook;
@@ -15,53 +15,94 @@ interface ApplicantCardProps {
   applicant: Applicant;
   isExpanded: boolean;
   onToggle: () => void;
+  isSelected: boolean;
+  onSelectChange: (selected: boolean) => void;
+  isWorkbookClosed: boolean;
 }
 
-function ApplicantCard({ applicant, isExpanded, onToggle }: ApplicantCardProps) {
+function ApplicantCard({ applicant, isExpanded, onToggle, isSelected, onSelectChange, isWorkbookClosed }: ApplicantCardProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+    <div className={`bg-white rounded-lg border-2 shadow-sm hover:shadow-md transition-all duration-200 ${
+      isSelected 
+        ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-blue-100' 
+        : 'border-gray-200 hover:border-gray-300'
+    } ${isWorkbookClosed ? 'opacity-75' : ''}`}>
       {/* Header do card - sempre visível */}
-      <div 
-        className="p-4 cursor-pointer flex justify-between items-center"
-        onClick={onToggle}
-      >
+      <div className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-            {applicant.nome.charAt(0).toUpperCase()}
+          {/* Checkbox de seleção */}
+          <div className="flex-shrink-0">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              disabled={isWorkbookClosed}
+              onChange={(e) => {
+                e.stopPropagation();
+                if (!isWorkbookClosed) {
+                  onSelectChange(e.target.checked);
+                }
+              }}
+              className={`w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer ${
+                isWorkbookClosed ? 'cursor-not-allowed opacity-50' : ''
+              }`}
+            />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-900">{applicant.nome}</h3>
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                ID: {applicant.id}
-              </span>
+          
+          {/* Informações do candidato */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex-shrink-0">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                isSelected 
+                  ? 'bg-gradient-to-br from-blue-600 to-indigo-700' 
+                  : 'bg-gradient-to-br from-blue-500 to-purple-600'
+              }`}>
+                {applicant.nome.charAt(0).toUpperCase()}
+              </div>
             </div>
-            <p className="text-sm text-gray-600">{applicant.email}</p>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-gray-500 capitalize">{applicant.nivel_maximo_formacao}</p>
-              {applicant.score_semantico !== undefined && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
-                  Score: {(applicant.score_semantico * 100).toFixed(1)}%
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-gray-900 truncate">{applicant.nome}</h3>
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full flex-shrink-0">
+                  ID: {applicant.id}
                 </span>
+              </div>
+              <p className="text-sm text-gray-600 truncate">{applicant.email}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-xs text-gray-500 capitalize">{applicant.nivel_maximo_formacao}</p>
+                {applicant.score_semantico !== undefined && (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                    Score: {(applicant.score_semantico * 100).toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Informações resumidas e botão expandir */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-900">
+                {applicant.cv_pt?.habilidades?.length || 0} habilidades
+              </div>
+              <div className="text-xs text-gray-500">
+                {applicant.cv_pt?.experiencias?.length || 0} experiências
+              </div>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronUp className="w-5 h-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400" />
               )}
-            </div>
+            </button>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <div className="text-right">
-            <div className="text-sm font-medium text-gray-900">
-              {applicant.cv_pt.habilidades.length} habilidades
-            </div>
-            <div className="text-xs text-gray-500">
-              {applicant.cv_pt.experiencias.length} experiências
-            </div>
-          </div>
-          {isExpanded ? (
-            <ChevronUp className="w-5 h-5 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-gray-400" />
-          )}
         </div>
       </div>
 
@@ -91,10 +132,27 @@ function ApplicantCard({ applicant, isExpanded, onToggle }: ApplicantCardProps) 
                   <span>{applicant.telefone_celular}</span>
                 </div>
               )}
-              {applicant.data_nascimento && (
+              {applicant.data_nascimento && applicant.data_nascimento !== "0000-00-00" && (
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
-                  <span>{new Date(applicant.data_nascimento).toLocaleDateString('pt-BR')}</span>
+                  <span>
+                    {(() => {
+                      try {
+                        let dateStr = applicant.data_nascimento;
+                        
+                        // Se está no formato DD-MM-YYYY, converte para YYYY-MM-DD
+                        if (dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
+                          const [day, month, year] = dateStr.split('-');
+                          dateStr = `${year}-${month}-${day}`;
+                        }
+                        
+                        const date = new Date(dateStr);
+                        return isNaN(date.getTime()) ? applicant.data_nascimento : date.toLocaleDateString('pt-BR');
+                      } catch {
+                        return applicant.data_nascimento;
+                      }
+                    })()}
+                  </span>
                 </div>
               )}
               <div className="flex items-center gap-2">
@@ -115,7 +173,7 @@ function ApplicantCard({ applicant, isExpanded, onToggle }: ApplicantCardProps) 
               Habilidades
             </h4>
             <div className="flex flex-wrap gap-2">
-              {applicant.cv_pt.habilidades.map((habilidade, index) => (
+              {(applicant.cv_pt?.habilidades || []).map((habilidade, index) => (
                 <span
                   key={index}
                   className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
@@ -127,14 +185,14 @@ function ApplicantCard({ applicant, isExpanded, onToggle }: ApplicantCardProps) 
           </div>
 
           {/* Idiomas */}
-          {applicant.cv_pt.idiomas && applicant.cv_pt.idiomas.length > 0 && (
+          {applicant.cv_pt?.idiomas && applicant.cv_pt.idiomas.length > 0 && (
             <div>
               <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                 <Globe className="w-4 h-4" />
                 Idiomas
               </h4>
               <div className="flex flex-wrap gap-2">
-                {applicant.cv_pt.idiomas.map((idioma, index) => (
+                {(applicant.cv_pt?.idiomas || []).map((idioma, index) => (
                   <span
                     key={index}
                     className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
@@ -153,7 +211,7 @@ function ApplicantCard({ applicant, isExpanded, onToggle }: ApplicantCardProps) 
               Formação
             </h4>
             <div className="space-y-3">
-              {applicant.cv_pt.formacoes.map((formacao, index) => (
+              {(applicant.cv_pt?.formacoes || []).map((formacao, index) => (
                 <div key={index} className="bg-gray-50 rounded-lg p-3">
                   <div className="font-medium text-gray-900">{formacao.curso}</div>
                   <div className="text-sm text-gray-600 capitalize">{formacao.nivel}</div>
@@ -173,7 +231,7 @@ function ApplicantCard({ applicant, isExpanded, onToggle }: ApplicantCardProps) 
               Experiências Profissionais
             </h4>
             <div className="space-y-4">
-              {applicant.cv_pt.experiencias.map((experiencia, index) => (
+              {(applicant.cv_pt?.experiencias || []).map((experiencia, index) => (
                 <div key={index} className="bg-gray-50 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -207,7 +265,8 @@ function VagaInfoHorizontal({ vagaId }: VagaInfoHorizontalProps) {
   const { data: vaga, isLoading, error } = useQuery({
     queryKey: ['vaga', vagaId],
     queryFn: () => apiService.getVagaDetalhes(vagaId),
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    refetchOnWindowFocus: true, // Recarrega quando volta para a aba
   });
 
   if (isLoading) {
@@ -381,6 +440,8 @@ function VagaInfoHorizontal({ vagaId }: VagaInfoHorizontalProps) {
 }
 
 export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false }: WorkbookDetailsProps) {
+  const queryClient = useQueryClient();
+  
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -396,8 +457,209 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
   const [lastFilterQuery, setLastFilterQuery] = useState<string>('');
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [showReopenConfirm, setShowReopenConfirm] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined); // Estado para manter session_id
+  
+  // Estados para sistema de seleção
+  const [selectedApplicants, setSelectedApplicants] = useState<Set<number>>(new Set());
+  const [isSavingSelection, setIsSavingSelection] = useState(false);
+  
+  // Verifica se há candidatos selecionados
+  const hasSelectedApplicants = selectedApplicants.size > 0;
+  
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Query para carregar match prospects existentes
+  const { data: existingProspects } = useQuery({
+    queryKey: ['match-prospects', workbook.id],
+    queryFn: () => apiService.getMatchProspects(workbook.id),
+    staleTime: 1 * 60 * 1000, // 1 minuto (dados mais voláteis)
+    refetchOnWindowFocus: true, // Recarrega quando volta para a aba
+  });
+
+  // Effect para carregar seleções existentes
+  useEffect(() => {
+    if (existingProspects) {
+      const selectedIds = new Set(
+        existingProspects
+          .filter(prospect => prospect.selecionado)
+          .map(prospect => prospect.applicant_id)
+      );
+      setSelectedApplicants(selectedIds);
+      
+      // Se há prospects existentes, carregar os candidatos correspondentes
+      if (existingProspects.length > 0) {
+        const loadProspectsAsCandidates = async () => {
+          try {
+            // Buscar dados completos dos candidatos via API
+            const candidateIds = existingProspects.map(p => p.applicant_id);
+            const candidates = await apiService.getApplicantsByIds(candidateIds);
+            
+            if (candidates.length > 0) {
+              // Adiciona informações dos prospects aos candidatos
+              const candidatesWithProspectInfo = candidates.map(candidate => ({
+                ...candidate,
+                score_semantico: existingProspects.find(p => p.applicant_id === candidate.id)?.score_semantico || 0.5,
+                selecionado: existingProspects.find(p => p.applicant_id === candidate.id)?.selecionado || false
+              }));
+              
+              // Ordena candidatos: selecionados primeiro, depois por score semântico
+              const sortedCandidates = candidatesWithProspectInfo.sort((a, b) => {
+                if (a.selecionado && !b.selecionado) return -1;
+                if (!a.selecionado && b.selecionado) return 1;
+                // Dentro do mesmo grupo (selecionado ou não), ordena por score semântico decrescente
+                return (b.score_semantico || 0) - (a.score_semantico || 0);
+              });
+              
+              setFilteredApplicants(sortedCandidates);
+              setTotalCandidates(sortedCandidates.length);
+              setLastFilterQuery('Candidatos salvos anteriormente');
+            }
+            
+          } catch (error) {
+            console.error('Erro ao carregar prospects:', error);
+          }
+        };
+        
+        loadProspectsAsCandidates();
+      }
+    }
+  }, [existingProspects]);
+
+  // Mutation para salvar seleção de candidatos
+  const saveSelectionMutation = useMutation({
+    mutationFn: (prospects: MatchProspectData[]) => 
+      apiService.updateMatchProspects(workbook.id, prospects),
+    onSuccess: () => {
+      const count = selectedApplicants.size;
+      if (count === 0) {
+        alert('🗑️ Todas as seleções foram removidas do workbook.');
+        // Limpa os candidatos filtrados se eram prospects salvos
+        if (lastFilterQuery === 'Candidatos salvos anteriormente') {
+          setFilteredApplicants([]);
+          setTotalCandidates(0);
+          setLastFilterQuery('');
+        }
+      } else {
+        alert(`✅ Sucesso! ${count} candidato${count !== 1 ? 's' : ''} selecionado${count !== 1 ? 's' : ''} salvo${count !== 1 ? 's' : ''} no workbook.`);
+      }
+      setIsSavingSelection(false);
+    },
+    onError: (error) => {
+      console.error('Erro ao salvar seleção:', error);
+      alert('❌ Erro ao salvar seleção. Tente novamente.');
+      setIsSavingSelection(false);
+    }
+  });
+
+  // Mutation para encerrar workbook
+  const closeWorkbookMutation = useMutation({
+    mutationFn: () => apiService.updateWorkbook(workbook.id, { 
+      status: 'fechado',
+      fechado_em: new Date().toISOString()
+    }),
+    onSuccess: () => {
+      alert('✅ Workbook encerrado com sucesso!');
+      setIsClosing(false);
+      setShowCloseConfirm(false);
+      
+      // Invalida a query dos workbooks para recarregar a lista
+      queryClient.invalidateQueries({ queryKey: ['workbooks'] });
+      
+      // Volta para a lista de workbooks
+      onBack();
+    },
+    onError: (error) => {
+      console.error('Erro ao encerrar workbook:', error);
+      alert('❌ Erro ao encerrar workbook. Tente novamente.');
+      setIsClosing(false);
+      setShowCloseConfirm(false);
+    }
+  });
+
+  // Mutation para reabrir workbook
+  const reopenWorkbookMutation = useMutation({
+    mutationFn: () => apiService.updateWorkbook(workbook.id, { 
+      status: 'aberto'
+    }),
+    onSuccess: () => {
+      alert('✅ Workbook reaberto com sucesso!');
+      setIsReopening(false);
+      setShowReopenConfirm(false);
+      
+      // Invalida a query dos workbooks para recarregar a lista
+      queryClient.invalidateQueries({ queryKey: ['workbooks'] });
+      
+      // Força recarregamento da página para atualizar o estado
+      window.location.reload();
+    },
+    onError: (error) => {
+      console.error('Erro ao reabrir workbook:', error);
+      alert('❌ Erro ao reabrir workbook. Tente novamente.');
+      setIsReopening(false);
+      setShowReopenConfirm(false);
+    }
+  });
+
+  // Funções para gerenciar seleção
+  const isWorkbookClosed = workbook.status === 'fechado';
+  
+  const handleApplicantSelect = (applicantId: number, selected: boolean) => {
+    if (isWorkbookClosed) return; // Não permite seleção se workbook estiver fechado
+    
+    setSelectedApplicants(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(applicantId);
+      } else {
+        newSet.delete(applicantId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSaveSelection = () => {
+    if (isWorkbookClosed) return; // Não permite salvar se workbook estiver fechado
+    
+    setIsSavingSelection(true);
+    
+    // Se não há candidatos selecionados, limpa todas as seleções (desseleciona tudo)
+    if (selectedApplicants.size === 0) {
+      // Envia array vazio para limpar todos os prospects
+      saveSelectionMutation.mutate([]);
+      return;
+    }
+    
+    // Converte apenas os candidatos SELECIONADOS em prospects
+    const selectedCandidates = filteredApplicants.filter(applicant => 
+      selectedApplicants.has(applicant.id)
+    );
+    
+    const prospects: MatchProspectData[] = selectedCandidates.map(applicant => ({
+      applicant_id: applicant.id,
+      score_semantico: applicant.score_semantico || 0.5,
+      origem: 'manual_selection',
+      selecionado: true, // Todos são marcados como selecionados
+      observacoes: 'Selecionado manualmente'
+    }));
+
+    saveSelectionMutation.mutate(prospects);
+  };
+
+  const toggleCardExpansion = (applicantId: number) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(applicantId)) {
+        newSet.delete(applicantId);
+      } else {
+        newSet.add(applicantId);
+      }
+      return newSet;
+    });
+  };
 
   // Mutation para enviar mensagens para o LLM
   const chatMutation = useMutation({
@@ -448,7 +710,7 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
   }, [chatMessages]);
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading || chatMutation.isPending) return;
+    if (!inputMessage.trim() || isLoading || chatMutation.isPending || isWorkbookClosed) return;
 
     const currentMessage = inputMessage; // Captura antes de limpar
 
@@ -465,18 +727,6 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
 
     // Envia mensagem para o LLM usando a API
     chatMutation.mutate({ message: currentMessage });
-  };
-
-  const toggleCardExpansion = (applicantId: number) => {
-    setExpandedCards(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(applicantId)) {
-        newSet.delete(applicantId);
-      } else {
-        newSet.add(applicantId);
-      }
-      return newSet;
-    });
   };
 
   const handleDeleteWorkbook = () => {
@@ -527,6 +777,90 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
         </div>
       )}
 
+      {/* Modal de confirmação de encerramento */}
+      {showCloseConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-mx mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Encerrar Workbook</h3>
+                <p className="text-sm text-gray-600">Finalizar processo de recrutamento</p>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              Tem certeza que deseja encerrar o workbook <strong>#{workbook.id.slice(0, 8)}</strong>? 
+              O status será alterado para "fechado" e não será possível adicionar novos candidatos.
+              <br />
+              <span className="text-green-700 font-medium">
+                {selectedApplicants.size} candidato{selectedApplicants.size !== 1 ? 's' : ''} selecionado{selectedApplicants.size !== 1 ? 's' : ''} será{selectedApplicants.size !== 1 ? 'ão' : ''} mantido{selectedApplicants.size !== 1 ? 's' : ''} no workbook.
+              </span>
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowCloseConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setIsClosing(true);
+                  closeWorkbookMutation.mutate();
+                }}
+                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Encerrar Workbook
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de reabertura */}
+      {showReopenConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-mx mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <RotateCcw className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Reabrir Workbook</h3>
+                <p className="text-sm text-gray-600">Reativar processo de recrutamento</p>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              Tem certeza que deseja reabrir o workbook <strong>#{workbook.id.slice(0, 8)}</strong>? 
+              O status será alterado para "aberto" e será possível continuar adicionando candidatos.
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowReopenConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setIsReopening(true);
+                  reopenWorkbookMutation.mutate();
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Reabrir Workbook
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -538,9 +872,18 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
               <ArrowLeft className="w-6 h-6" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Workbook #{workbook.id.slice(0, 8)}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Workbook #{workbook.id.slice(0, 8)}
+                </h1>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  workbook.status === 'fechado' 
+                    ? 'bg-gray-100 text-gray-700' 
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {workbook.status === 'fechado' ? 'Encerrado' : 'Ativo'}
+                </span>
+              </div>
               <p className="text-gray-600">{workbook.vaga_titulo}</p>
             </div>
           </div>
@@ -548,6 +891,44 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
             <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
               {filteredApplicants.length} candidatos
             </div>
+            {workbook.status === 'fechado' ? (
+              <button
+                onClick={() => setShowReopenConfirm(true)}
+                disabled={isReopening}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isReopening ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Reabrindo...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    Reabrir
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowCloseConfirm(true)}
+                disabled={isClosing || !hasSelectedApplicants}
+                className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                title={!hasSelectedApplicants ? "É necessário selecionar pelo menos um candidato para encerrar o workbook" : ""}
+              >
+                {isClosing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Encerrando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Encerrar
+                  </>
+                )}
+              </button>
+            )}
             <button
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
@@ -583,9 +964,22 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900">Assistente IA</h2>
-                <p className="text-sm text-gray-600">Filtro inteligente de candidatos</p>
+                <p className="text-sm text-gray-600">
+                  {isWorkbookClosed ? 'Workbook encerrado' : 'Filtro inteligente de candidatos'}
+                </p>
               </div>
             </div>
+            {isWorkbookClosed && (
+              <div className="mt-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">Este workbook está encerrado</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  Para continuar adicionando candidatos, reabra o workbook clicando no botão "Reabrir" acima.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Mensagens do Chat */}
@@ -637,14 +1031,14 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Digite sua pergunta ou critério de busca..."
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                disabled={isLoading || chatMutation.isPending}
+                placeholder={isWorkbookClosed ? "Workbook encerrado - chat desabilitado" : "Digite sua pergunta ou critério de busca..."}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                disabled={isLoading || chatMutation.isPending || isWorkbookClosed}
               />
               <button
                 onClick={handleSendMessage}
-                disabled={isLoading || chatMutation.isPending || !inputMessage.trim()}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white p-2 rounded-lg transition-colors"
+                disabled={isLoading || chatMutation.isPending || !inputMessage.trim() || isWorkbookClosed}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white p-2 rounded-lg transition-colors disabled:cursor-not-allowed"
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -656,7 +1050,45 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
         <div className="w-1/2 bg-gray-50 overflow-y-auto">
           <div className="p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Candidatos Filtrados</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Candidatos Filtrados</h2>
+                
+                {/* Botão Salvar */}
+                {filteredApplicants.length > 0 && !isWorkbookClosed && (
+                  <div className="flex items-center gap-4">
+                    <span className={`text-sm font-medium ${
+                      selectedApplicants.size > 0 ? 'text-blue-600' : 'text-gray-500'
+                    }`}>
+                      {selectedApplicants.size} de {filteredApplicants.length} selecionado{selectedApplicants.size !== 1 ? 's' : ''}
+                    </span>
+                    <button
+                      onClick={handleSaveSelection}
+                      disabled={isSavingSelection}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                        isSavingSelection
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : selectedApplicants.size === 0
+                          ? 'bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
+                      }`}
+                      title={selectedApplicants.size === 0 ? 'Remove todas as seleções salvas' : 'Salva apenas os candidatos selecionados'}
+                    >
+                      {selectedApplicants.size === 0 ? (
+                        <>
+                          <Trash2 className="w-4 h-4" />
+                          {isSavingSelection ? 'Limpando...' : 'Limpar Tudo'}
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          {isSavingSelection ? 'Salvando...' : 'Salvar'}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+              
               <div className="space-y-1">
                 <p className="text-gray-600">
                   {filteredApplicants.length} candidato{filteredApplicants.length !== 1 ? 's' : ''} encontrado{filteredApplicants.length !== 1 ? 's' : ''}
@@ -665,9 +1097,16 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
                   }
                 </p>
                 {lastFilterQuery && filteredApplicants.length > 0 && (
-                  <p className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-lg inline-block">
-                    Filtro: "{lastFilterQuery}"
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-lg inline-block">
+                      {lastFilterQuery === 'Candidatos salvos anteriormente' ? '📋' : '🔍'} {lastFilterQuery}
+                    </p>
+                    {existingProspects && existingProspects.length > 0 && lastFilterQuery === 'Candidatos salvos anteriormente' && (
+                      <span className="text-xs text-gray-500">
+                        (carregados do workbook)
+                      </span>
+                    )}
+                  </div>
                 )}
                 {filteredApplicants.some(applicant => applicant.score_semantico !== undefined) && (
                   <p className="text-xs text-green-600">
@@ -684,6 +1123,9 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
                   applicant={applicant}
                   isExpanded={expandedCards.has(applicant.id)}
                   onToggle={() => toggleCardExpansion(applicant.id)}
+                  isSelected={selectedApplicants.has(applicant.id)}
+                  onSelectChange={(selected) => handleApplicantSelect(applicant.id, selected)}
+                  isWorkbookClosed={isWorkbookClosed}
                 />
               ))}
             </div>

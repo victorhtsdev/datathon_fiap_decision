@@ -11,7 +11,7 @@ class WorkbookRepository(BaseRepository[Workbook]):
         return Workbook
     
     def get_all(self) -> List[dict]:
-        """Retorna todos os workbooks com o título da vaga"""
+        """Returns all workbooks with job title"""
         result = self.db.query(
             Workbook.id,
             Workbook.vaga_id,
@@ -22,11 +22,11 @@ class WorkbookRepository(BaseRepository[Workbook]):
             Vaga.informacoes_basicas_titulo_vaga.label('vaga_titulo')
         ).join(
             Vaga, Workbook.vaga_id == Vaga.id
-        ).all()
+        ).order_by(Workbook.criado_em.desc()).all()
         
         workbooks = []
         for row in result:
-            # Criar um objeto que simula o modelo Workbook mas com vaga_titulo
+            # Create an object that simulates the Workbook model but with vaga_titulo
             workbook_dict = {
                 'id': row.id,
                 'vaga_id': row.vaga_id,
@@ -44,7 +44,7 @@ class WorkbookRepository(BaseRepository[Workbook]):
         return self.db.query(Workbook).filter(Workbook.id == workbook_id).first()
     
     def get_workbook(self, workbook_id: str) -> Optional[Workbook]:
-        """Busca workbook por string UUID"""
+        """Search workbook by string UUID"""
         try:
             workbook_uuid = uuid.UUID(workbook_id)
             return self.get_by_uuid(workbook_uuid)
@@ -68,7 +68,7 @@ class WorkbookRepository(BaseRepository[Workbook]):
         return db_obj
     
     def delete_by_uuid(self, workbook_id: uuid.UUID) -> bool:
-        """Deleta um workbook por UUID"""
+        """Delete a workbook by UUID"""
         workbook = self.get_by_uuid(workbook_id)
         if not workbook:
             return False

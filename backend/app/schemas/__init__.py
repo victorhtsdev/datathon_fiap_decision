@@ -14,3 +14,17 @@ from .match_prospect import (
     MatchProspectResponse, 
     MatchProspectsUpdate
 )
+from .prospects_match import (
+    ApplicantProspectResponse,
+    ProspectMatchByWorkbookResponse,
+    ProspectMatchByVagaResponse
+)
+from .semantic_performance import (
+    SemanticPerformanceResponse,
+    CacheClearResponse,
+    TopPositionStats,
+    MetricasGerais,
+    HistogramPoint,
+    StatusDistribution,
+    PgVectorInfo
+)

@@ -1,6 +1,15 @@
-import { Briefcase, BarChart3, Users, FileText, Sparkles } from 'lucide-react';
+import { Briefcase, FileText, Sparkles, BarChart3 } from 'lucide-react';
 
-export function Header() {
+interface HeaderProps {
+  onNavigate?: (view: string) => void;
+}
+
+export function Header({ onNavigate }: HeaderProps) {
+  const getButtonClasses = () => {
+    // Todos os botões sempre com o estilo que era do botão ativo (texto branco + fundo branco transparente)
+    return "flex items-center gap-2 font-medium transition-all duration-200 px-3 py-2 rounded-lg text-white bg-white bg-opacity-20 hover:bg-opacity-30";
+  };
+
   return (
     <header className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-lg">
       <div className="container mx-auto px-4">
@@ -19,18 +28,21 @@ export function Header() {
           </div>
           
           <nav className="flex items-center space-x-8">
-            <a href="#" className="flex items-center gap-2 text-blue-100 hover:text-white font-medium transition-all duration-200 px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10">
+            <button
+              onClick={() => onNavigate?.('workbooks')}
+              className={getButtonClasses()}
+            >
               <FileText className="w-5 h-5" />
               Workbooks
-            </a>
-            <a href="#" className="flex items-center gap-2 text-blue-100 hover:text-white font-medium transition-all duration-200 px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10">
-              <Users className="w-5 h-5" />
-              Candidatos
-            </a>
-            <a href="#" className="flex items-center gap-2 text-blue-100 hover:text-white font-medium transition-all duration-200 px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10">
+            </button>
+            
+            <button
+              onClick={() => onNavigate?.('analytics')}
+              className={getButtonClasses()}
+            >
               <BarChart3 className="w-5 h-5" />
               Analytics
-            </a>
+            </button>
           </nav>
         </div>
       </div>

@@ -9,8 +9,7 @@ class ChatIntent(Enum):
     """Possíveis intenções do usuário no chat"""
     VAGA_QUESTION = "vaga_question"
     CANDIDATE_QUESTION = "candidate_question"
-    CANDIDATE_FILTER = "candidate_filter"
-    SEMANTIC_CANDIDATE_FILTER = "semantic_candidate_filter"  # Nova intenção para busca semântica
+    SEMANTIC_CANDIDATE_FILTER = "semantic_candidate_filter"  # Busca semântica de candidatos
     FILTER_RESET = "filter_reset"
     FILTER_HISTORY = "filter_history"
     GENERIC_CONVERSATION = "generic_conversation"
@@ -34,7 +33,7 @@ class IntentClassifier:
     def __init__(self):
         # Palavras-chave para diferentes intenções
         self.vaga_keywords = [
-            'vaga', 'posição', 'cargo', 'trabalho', 'empresa', 'salário', 
+            'vaga', 'posição', 'cargo', 'trabalho', 'inpresa', 'salário', 
             'benefícios', 'requisitos', 'responsabilidades', 'atividades',
             'local de trabalho', 'horário', 'contratação', 'descrição'
         ]
@@ -48,10 +47,13 @@ class IntentClassifier:
             'filtrar', 'filtre', 'buscar', 'busque', 'encontrar', 'encontre', 
             'mostrar', 'mostre', 'listar', 'liste', 'procurar', 'procure',
             'trazer', 'traga', 'selecionar', 'selecione', 'candidatos', 'pessoas',
-            'recomende', 'recomenda', 'sugira', 'sugere', 'ranking', 'top'
+            'recomende', 'recomenda', 'sugira', 'sugere', 'ranking', 'top',
+            'quero', 'quais', 'que', 'apenas', 'somente', 'só', 'so', 
+            'aqueles', 'aquelas', 'com', 'que tenham', 'que possuin', 'possuin',
+            'adicione', 'adicionar', 'inclua', 'incluir', 'acrescente', 'acrescentar'
         ]
         
-        # Palavras-chave específicas para busca semântica
+        # Palavras-chave específicas for semantic search
         self.semantic_filter_keywords = [
             'semântico', 'semantico', 'similares', 'compatíveis', 'compativeis',
             'parecidos', 'relacionados', 'semantic', 'matching', 'score',
@@ -103,7 +105,25 @@ class IntentClassifier:
                 reasoning="Usuário quer ver histórico de filtros"
             )
         
-        # 3. Verifica filtro/busca de candidatos
+        # 3. Verifica pergunta sobre vaga (PRIORIDADE sobre filtros)
+        vaga_score = self._score_keywords(message_lower, self.vaga_keywords)
+        is_question_about_vaga = (
+            vaga_score > 0 and 
+            any(word in message_lower for word in ['fale', 'conte', 'descreva', 'explique', 'sobre', 'qual', 'como', 'quais'])
+        )
+        
+        if is_question_about_vaga:
+            return IntentClassificationResult(
+                intent=ChatIntent.VAGA_QUESTION,
+                confidence=0.9,
+                parameters={
+                    'question': message,
+                    'workbook_id': workbook_id
+                },
+                reasoning="Usuário quer informações sobre a vaga (pergunta detectada)"
+            )
+
+        # 4. Verifica filtro/busca de candidatos
         filter_score = self._score_keywords(message_lower, self.filter_keywords)
         candidate_score = self._score_keywords(message_lower, self.candidate_keywords)
         semantic_score = self._score_keywords(message_lower, self.semantic_filter_keywords)
@@ -116,8 +136,8 @@ class IntentClassifier:
         
         use_semantic = (
             semantic_score > 0 or  # Palavras-chave explícitas de semântica
-            filter_score > 0 or  # QUALQUER filtro deve usar semântica por padrão
-            candidate_score > 0 or  # QUALQUER busca de candidatos usa semântica
+            filter_score > 0 or  # QUALQUER filtro deve usar sinântica por padrão
+            candidate_score > 0 or  # QUALQUER busca de candidatos usa sinântica
             'melhores' in message_lower or 'mais relevantes' in message_lower or
             'compatíveis' in message_lower or 'similares' in message_lower or
             has_numbers or has_location or has_skills or has_languages
@@ -126,7 +146,8 @@ class IntentClassifier:
         if filter_score > 0 or (candidate_score > 0 and (has_numbers or has_location or has_skills or has_languages)):
             confidence = 0.8 + (filter_score * 0.1) + (candidate_score * 0.1) + (semantic_score * 0.1)
             
-            intent = ChatIntent.SEMANTIC_CANDIDATE_FILTER if use_semantic else ChatIntent.CANDIDATE_FILTER
+            # Sinpre usa o handler sinântico agora
+            intent = ChatIntent.SEMANTIC_CANDIDATE_FILTER
             
             return IntentClassificationResult(
                 intent=intent,
@@ -143,7 +164,7 @@ class IntentClassifier:
                 reasoning=f"Usuário quer filtrar candidatos {'com busca semântica' if use_semantic else 'com filtros específicos'}"
             )
         
-        # 4. Verifica pergunta sobre candidato específico
+        # 5. Verifica pergunta sobre candidato específico
         candidate_id_pattern = r'candidato\s+(\d+)|id\s*:?\s*(\d+)'
         candidate_id_match = re.search(candidate_id_pattern, message_lower)
         
@@ -163,7 +184,7 @@ class IntentClassifier:
                 reasoning="Usuário quer informações sobre candidato específico"
             )
         
-        # 5. Verifica pergunta sobre vaga
+        # 6. Verifica pergunta sobre vaga (fallback)
         vaga_score = self._score_keywords(message_lower, self.vaga_keywords)
         if vaga_score > 0:
             return IntentClassificationResult(
@@ -176,7 +197,7 @@ class IntentClassifier:
                 reasoning="Usuário quer informações sobre a vaga"
             )
         
-        # 6. Verifica conversação genérica
+        # 7. Verifica conversação genérica
         if self._is_generic_conversation(message_lower):
             return IntentClassificationResult(
                 intent=ChatIntent.GENERIC_CONVERSATION,
@@ -185,7 +206,7 @@ class IntentClassifier:
                 reasoning="Conversação genérica (saudação, agradecimento, etc.)"
             )
         
-        # 7. Intent desconhecida
+        # 8. Intent desconhecida
         return IntentClassificationResult(
             intent=ChatIntent.UNKNOWN,
             confidence=0.3,

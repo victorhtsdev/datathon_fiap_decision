@@ -120,6 +120,25 @@ export interface Applicant {
   updated_at: string;
   cv_pt: CvPt;
   score_semantico?: number;  // Pontuação semântica para busca por filtros
+  selecionado?: boolean;     // Indicador se foi selecionado manualmente
+}
+
+export interface MatchProspect {
+  workbook_id: string;
+  applicant_id: number;
+  score_semantico: number;
+  origem: string;
+  selecionado: boolean;
+  data_entrada: string;
+  observacoes?: string;
+}
+
+export interface MatchProspectData {
+  applicant_id: number;
+  score_semantico?: number;
+  origem?: string;
+  selecionado?: boolean;
+  observacoes?: string;
 }
 
 export interface ChatMessage {
@@ -136,4 +155,133 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+// Tipos para consulta de processed_applicants via match_prospects
+export interface ApplicantProspect {
+  // Dados do match_prospect
+  workbook_id: string;
+  applicant_id: number;
+  score_semantico?: number;
+  origem?: string;
+  selecionado?: boolean;
+  data_entrada?: string;
+  observacoes?: string;
+  
+  // Dados do processed_applicant
+  nome?: string;
+  email?: string;
+  cpf?: string;
+  telefone_celular?: string;
+  nivel_maximo_formacao?: string;
+  cv_pt?: CvPt;
+  updated_at?: string;
+}
+
+export interface ProspectMatchByWorkbook {
+  workbook_id: string;
+  vaga_id: number;
+  vaga_titulo?: string;
+  prospects: ApplicantProspect[];
+  total_prospects: number;
+}
+
+export interface ProspectMatchByVaga {
+  vaga_id: number;
+  vaga_titulo?: string;
+  workbooks: ProspectMatchByWorkbook[];
+  total_prospects: number;
+}
+
+export interface WorkbookProspectSummary {
+  workbook_id: string;
+  vaga_id: number;
+  vaga_titulo?: string;
+  total_prospects: number;
+}
+
+// Análise de Performance Semântica
+export interface TopPositionStats {
+  quantidade: number;
+  percentual: number;
+}
+
+export interface MetricasGerais {
+  total_aprovados: number;
+  media_posicao: number;
+  mediana_posicao: number;
+  desvio_padrao: number;
+  vagas_analisadas: number;
+  vagas_com_ranking_semantico: number;
+}
+
+export interface HistogramPoint {
+  posicao: number;
+  quantidade: number;
+}
+
+export interface StatusDistribution {
+  status: string;
+  quantidade: number;
+}
+
+export interface InterpretacaoEstruturada {
+  titulo: string;
+  visao_geral: {
+    total_candidatos: {
+      valor: number;
+      descricao: string;
+    };
+    objetivo: string;
+  };
+  metricas_precisao: Array<{
+    label: string;
+    valor: string;
+    tipo?: string;
+    descricao?: string;
+  }>;
+  analise_detalhada: Array<{
+    categoria: string;
+    quantidade: number;
+    percentual: number;
+    interpretacao: string;
+    cor: string;
+  }>;
+  conclusao: {
+    nivel_precisao: string;
+    cor: string;
+    texto: string;
+    recomendacao: string;
+  };
+}
+
+export interface SemanticPerformanceResponse {
+  metricas_gerais: MetricasGerais;
+  distribuicao_top_positions: Record<string, TopPositionStats>;
+  histogram_data: HistogramPoint[];
+  status_distribution: StatusDistribution[];
+  pgvector_info: {
+    operador_usado: string;
+    tipo_distancia: string;
+    interpretacao: string;
+    range_tipico: string;
+    ordenacao: string;
+  };
+  mensagem_interpretacao: string;
+  interpretacao_estruturada: InterpretacaoEstruturada;
+  generated_at: string;
+}
+
+export interface CacheClearResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface SemanticPerformanceInfo {
+  titulo: string;
+  descricao: string;
+  metodologia: Record<string, string>;
+  metricas_principais: string[];
+  tecnologia: Record<string, string>;
+  cache: Record<string, string>;
 }

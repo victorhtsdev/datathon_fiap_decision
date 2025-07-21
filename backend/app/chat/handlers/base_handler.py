@@ -19,7 +19,7 @@ class BaseChatHandler(ABC):
         Processa a solicitação do usuário
         
         Args:
-            parameters: Parâmetros extraídos da mensagem
+            parameters: Parameters extraídos da mensagem
             session: Sessão de chat atual
             
         Returns:

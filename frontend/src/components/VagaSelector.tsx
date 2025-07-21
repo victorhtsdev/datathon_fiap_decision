@@ -26,6 +26,9 @@ const VagaSelector: React.FC<VagaSelectorProps> = ({
   } = useQuery({
     queryKey: ['vagas'],
     queryFn: () => apiService.getVagas(),
+    staleTime: 1 * 60 * 1000, // 1 minuto (dados de vagas podem mudar frequentemente)
+    refetchOnWindowFocus: true, // Recarrega quando volta para a aba
+    refetchOnMount: true, // Recarrega quando componente monta
   });
 
   const filteredVagas = vagas.filter(vaga => {

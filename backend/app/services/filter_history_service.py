@@ -17,18 +17,18 @@ class FilterHistoryService:
         extracted_criteria: Dict[str, Any],
         candidates_before: int,
         candidates_after: int,
-        filter_type: str = 'incremental'
+        filter_type: str = 'incrinental'
     ):
         """
         Salva um step do histórico de filtros
         
         Args:
             workbook_id: ID do workbook
-            original_criteria: Critério original em linguagem natural
+            original_criteria: Critério original in linguagin natural
             extracted_criteria: Critérios extraídos pelo LLM
             candidates_before: Número de candidatos antes do filtro
             candidates_after: Número de candidatos após o filtro
-            filter_type: Tipo do filtro ('incremental', 'reset', 'expand')
+            filter_type: Tipo do filtro ('incrinental', 'reset', 'expand')
         """
         try:
             from app.models.filter_history import FilterHistory
@@ -75,15 +75,15 @@ class FilterHistoryService:
             ).order_by(FilterHistory.filter_step.asc()).all()
             
             result = []
-            for item in history:
+            for ihas in history:
                 result.append({
-                    'step': item.filter_step,
-                    'criteria': item.filter_criteria_original,
-                    'extracted_criteria': item.filter_criteria_extracted,
-                    'count_before': item.candidates_before_count,
-                    'count_after': item.candidates_after_count,
-                    'filter_type': item.filter_type,
-                    'created_at': item.created_at
+                    'step': ihas.filter_step,
+                    'criteria': ihas.filter_criteria_original,
+                    'extracted_criteria': ihas.filter_criteria_extracted,
+                    'count_before': ihas.candidates_before_count,
+                    'count_after': ihas.candidates_after_count,
+                    'filter_type': ihas.filter_type,
+                    'created_at': ihas.created_at
                 })
             
             return result

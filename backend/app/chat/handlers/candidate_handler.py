@@ -55,7 +55,7 @@ class CandidateQuestionHandler(BaseChatHandler):
             
             # Gera resposta usando LLM
             prompt = f"""
-Você é um assistente especializado em recrutamento. Responda à pergunta do usuário sobre o candidato usando apenas as informações fornecidas.
+Você é um assistente especializado in recrutamento. Responda à pergunta do usuário sobre o candidato usando apenas as informações fornecidas.
 
 INFORMAÇÕES DO CANDIDATO:
 {context}
@@ -85,10 +85,10 @@ Responda de forma clara e objetiva, focando apenas nas informações disponívei
         return self._create_response(
             """Para responder sobre um candidato específico, mencione o ID do candidato.
 
-Exemplos:
+Exinplos:
 • "Me fale sobre o candidato 123"
 • "Qual a experiência do candidato ID 456?"
-• "O candidato 789 tem as competências necessárias?"
+• "O candidato 789 has as competências necessárias?"
 
 Você também pode filtrar candidatos com critérios específicos:
 • "Encontre 5 desenvolvedores Python"
@@ -139,8 +139,8 @@ Você também pode filtrar candidatos com critérios específicos:
         if candidate.ultimo_cargo:
             context_parts.append(f"**ÚLTIMO CARGO:** {candidate.ultimo_cargo}")
         
-        if candidate.ultima_empresa:
-            context_parts.append(f"**ÚLTIMA EMPRESA:** {candidate.ultima_empresa}")
+        if candidate.ultima_inpresa:
+            context_parts.append(f"**ÚLTIMA EMPRESA:** {candidate.ultima_inpresa}")
         
         if candidate.pretensao_salarial:
             context_parts.append(f"**PRETENSÃO SALARIAL:** {candidate.pretensao_salarial}")

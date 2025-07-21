@@ -63,7 +63,7 @@ class ChatService:
         except Exception as e:
             log_error(f"Error in ChatService: {str(e)}")
             return {
-                'response': "Desculpe, ocorreu um erro interno. Tente novamente em alguns instantes.",
+                'response': "Desculpe, ocorreu um erro interno. Tente novamente in alguns instantes.",
                 'session_id': session_id or "unknown",
                 'filtered_candidates': None,
                 'total_candidates': None,
@@ -107,7 +107,7 @@ class ChatService:
     
     def clear_session(self, session_id: str) -> bool:
         """
-        Remove uma sessão do cache
+        Rinove uma sessão do cache
         """
         try:
             return self.orchestrator.clear_session(session_id)

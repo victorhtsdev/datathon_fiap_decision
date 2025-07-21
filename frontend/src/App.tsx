@@ -4,19 +4,24 @@ import { VagaSelector } from './components/VagaSelector';
 import { WorkbookList } from './components/WorkbookList';
 import { WorkbookDetails } from './components/WorkbookDetails';
 import { Header } from './components/Header';
+import { SemanticPerformanceAnalysis } from './components/SemanticPerformanceAnalysis';
 import { apiService } from './services/api';
 import type { Vaga, Workbook } from './types/api';
 
 const globalQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, 
+      staleTime: 2 * 60 * 1000, // 2 minutos (reduzido de 5min)
+      gcTime: 10 * 60 * 1000, // 10 minutos para garbage collection
       retry: 1,
+      refetchOnWindowFocus: true, // Recarrega quando volta para a aba
+      refetchOnMount: true, // Recarrega quando componente monta
+      refetchOnReconnect: true, // Recarrega quando reconecta internet
     },
   },
 });
 
-type ViewMode = 'workbooks' | 'create-workbook' | 'workbook-details';
+type ViewMode = 'workbooks' | 'create-workbook' | 'workbook-details' | 'analytics';
 
 function CreateWorkbookView({ onBack }: { onBack: () => void }) {
   const queryClient = useQueryClient();
@@ -111,6 +116,13 @@ function AppContent() {
     deleteWorkbookMutation.mutate(workbook);
   };
 
+  const handleNavigate = (view: string) => {
+    setCurrentView(view as ViewMode);
+    if (view === 'workbooks') {
+      setSelectedWorkbook(null);
+    }
+  };
+
   const renderCurrentView = () => {
     switch (currentView) {
       case 'workbooks':
@@ -134,6 +146,8 @@ function AppContent() {
             onWorkbookSelect={handleWorkbookSelect}
           />
         );
+      case 'analytics':
+        return <SemanticPerformanceAnalysis />;
       default:
         return <WorkbookList 
           onCreateNew={() => setCurrentView('create-workbook')}
@@ -163,10 +177,10 @@ function AppContent() {
         </div>
       )}
       
-      <Header />
+      <Header onNavigate={handleNavigate} />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          {currentView !== 'workbook-details' && (
+          {currentView !== 'workbook-details' && currentView !== 'analytics' && (
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Sistema de Matching de Candidatos

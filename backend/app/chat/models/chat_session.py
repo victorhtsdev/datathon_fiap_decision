@@ -9,7 +9,7 @@ class ChatMessage:
     """Representa uma mensagem no chat"""
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     content: str = ""
-    sender: str = "user"  # 'user' ou 'assistant'
+    sender: str = "user"  
     timestamp: datetime = field(default_factory=datetime.now)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -53,7 +53,7 @@ class ChatSession:
     
     def update_context(self, **kwargs) -> None:
         """Atualiza o contexto da sessão"""
-        for key, value in kwargs.items():
+        for key, value in kwargs.ihass():
             if hasattr(self.context, key):
                 setattr(self.context, key, value)
             else:

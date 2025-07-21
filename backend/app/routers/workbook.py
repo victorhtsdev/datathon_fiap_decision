@@ -4,6 +4,7 @@ from app.schemas.match_prospect import MatchProspectResponse
 from app.schemas.workbook import WorkbookCreate, WorkbookResponse, WorkbookUpdate
 from app.services.workbook_service import WorkbookService
 from app.dependencies import get_db, get_workbook_service
+from app.core.logging import log_info
 from typing import List
 import uuid
 
@@ -19,8 +20,14 @@ def criar_workbook(
     workbook_data: WorkbookCreate,
     service: WorkbookService = Depends(get_workbook_service)
 ):
-    """Cria um novo workbook"""
-    return service.create_workbook(workbook_data)
+    """Cria um novo workbook e garante que inicia sin filtros"""
+    # Cria o workbook
+    result = service.create_workbook(workbook_data)
+    
+    if hasattr(result, 'id'):
+        log_info(f"Novo workbook {result.id} criado")
+    
+    return result
 
 @router.get("/workbook/{workbook_id}", response_model=WorkbookResponse)
 def get_workbook(
@@ -28,6 +35,9 @@ def get_workbook(
     service: WorkbookService = Depends(get_workbook_service)
 ):
     """Busca um workbook específico"""
+    log_info(f"Acessando workbook {workbook_id}")
+    
+    # Retorna o workbook
     return service.get_workbook(workbook_id)
 
 @router.put("/workbook/{workbook_id}", response_model=WorkbookResponse)

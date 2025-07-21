@@ -14,6 +14,8 @@ import os
 from app.services.cv_extractor_service import extract_section, merge_results, education_level_order, VALID_LANGUAGE_LEVELS
 from app.repositories.applicant_repository import ApplicantRepository
 from app.services.applicant_processing_orchestrator import ApplicantProcessingOrchestrator
+from typing import List
+from pydantic import BaseModel
 
 router = APIRouter()
 executor = ThreadPoolExecutor(max_workers=4)
@@ -107,7 +109,7 @@ def get_processed_applicant(applicant_id: int):
             return {"error": "Applicant not found."}
         # Build the dictionary with all fields, but replace cv_pt with the JSON from cv_pt_json
         result = {c.name: getattr(db_obj, c.name) for c in db_obj.__table__.columns if c.name not in ["cv_texto_semantico", "cv_embedding", "cv_embedding_vector"]}
-        # Remove cv_pt_json from the result, only return cv_pt with the processed JSON
+        # Rinove cv_pt_json from the result, only return cv_pt with the processed JSON
         if "cv_pt_json" in result:
             del result["cv_pt_json"]
         if db_obj.cv_pt_json:
@@ -119,5 +121,56 @@ def get_processed_applicant(applicant_id: int):
             result["cv_pt"] = None
         # updated_at will already be present in result, as it is in the model
         return result
+    finally:
+        db.close()
+
+
+class ApplicantIdsRequest(BaseModel):
+    applicant_ids: List[int]
+
+
+@router.post("/get_applicants_by_ids")
+def get_applicants_by_ids(request: ApplicantIdsRequest):
+    """Busca múltiplos candidatos por uma lista de IDs"""
+    db = SessionLocal()
+    try:
+        if not request.applicant_ids:
+            return []
+            
+        applicants = db.query(ProcessedApplicant).filter(
+            ProcessedApplicant.id.in_(request.applicant_ids)
+        ).all()
+        
+        results = []
+        for applicant in applicants:
+            # Build the dictionary with all fields, but exclude heavy fields
+            result = {
+                c.name: getattr(applicant, c.name) 
+                for c in applicant.__table__.columns 
+                if c.name not in ["cv_texto_semantico", "cv_embedding", "cv_embedding_vector", "cv_pt_json"]
+            }
+            
+            # Add processed CV data
+            if applicant.cv_pt_json:
+                if isinstance(applicant.cv_pt_json, str):
+                    result["cv_pt"] = json.loads(applicant.cv_pt_json)
+                else:
+                    result["cv_pt"] = applicant.cv_pt_json
+            else:
+                result["cv_pt"] = {
+                    "habilidades": [],
+                    "idiomas": [],
+                    "formacoes": [],
+                    "experiencias": []
+                }
+            
+            results.append(result)
+        
+        log_info(f"Retornados {len(results)} candidatos de {len(request.applicant_ids)} solicitados")
+        return results
+        
+    except Exception as e:
+        log_error(f"Erro ao buscar candidatos por IDs: {str(e)}")
+        return []
     finally:
         db.close()

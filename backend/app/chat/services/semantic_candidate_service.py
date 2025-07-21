@@ -9,103 +9,304 @@ import re
 
 class SemanticCandidateService:
     """
-    Serviço especializado para busca semântica de candidatos.
-    Concentra toda a lógica de busca semântica e filtros SQL.
+    Simplified service for semantic candidate search.
+    
+    Single flow:
+    1. extract_criteria_with_llm() - Extract criteria from text
+    2. semantic_filter_candidates() - Search pool + filter in Python
+    
+    No duplications: Removed obsolete SQL methods.
     """
     
     def __init__(self, db: Session):
         self.db = db
         self.llm_client = get_llm_client()
     
+    def filter_candidates_complete(self, workbook_id: str, user_input: str) -> Dict[str, Any]:
+        """
+        Single simplified method: No minory, just extract criteria and search.
+        
+        Input: user text
+        Output: complete response for chat
+        """
+        try:
+            log_info(f"=== SIMPLE FILTER: '{user_input}' ===")
+            
+            # Step 1: Extract criteria with LLM (no context)
+            criteria = self.extract_criteria_with_llm(user_input)
+            
+            # Step 2: Search candidates directly
+            candidates = self.semantic_filter_candidates(workbook_id, criteria)
+            
+            # Step 3: Save as prospects
+            self.save_candidates_as_prospects(workbook_id, candidates)
+            
+            # Step 4: Smart response considering selected candidates
+            total_count = len(candidates)
+            
+            # Count existing selected candidates
+            from app.models.match_prospect import MatchProspect
+            selected_count = self.db.query(MatchProspect).filter(
+                MatchProspect.workbook_id == workbook_id,
+                MatchProspect.selecionado == True
+            ).count()
+            
+            new_candidates_count = total_count - selected_count
+            
+            # Build appropriate message
+            if total_count == 0:
+                message = "Nenhum candidato encontrado."
+            elif selected_count == 0:
+                # Only new candidates
+                if new_candidates_count == 1:
+                    message = "Encontrei 1 candidato."
+                else:
+                    message = f"Encontrei {new_candidates_count} candidatos."
+            else:
+                # Has selected candidates
+                if new_candidates_count == 0:
+                    message = f"Existem {selected_count} candidato{selected_count != 1 and 's' or ''} selecionado{selected_count != 1 and 's' or ''} (nenhum novo encontrado)."
+                elif new_candidates_count == 1:
+                    message = f"Encontrei mais 1 candidato e existem {selected_count} selecionado{selected_count != 1 and 's' or ''}."
+                else:
+                    message = f"Encontrei mais {new_candidates_count} candidatos e existem {selected_count} selecionado{selected_count != 1 and 's' or ''}."
+            
+            return {
+                "response": message,
+                "data": {
+                    "candidates": candidates,
+                    "total": total_count
+                },
+                "intent": "filter_candidates"
+            }
+            
+        except Exception as e:
+            log_error(f"Error in complete filter: {str(e)}")
+            return {
+                "response": "Erro ao filtrar candidatos.",
+                "data": {"candidates": [], "total": 0},
+                "intent": "filter_candidates"
+            }
+    
     def extract_criteria_with_llm(self, filter_text: str) -> Dict[str, Any]:
         """
-        Usa LLM para extrair critérios específicos de filtro a partir de texto natural
+        Use LLM to extract specific filter criteria from natural text
+        Simplified version: No historical context
         """
         prompt = self._build_extraction_prompt(filter_text)
         
         try:
             response = self.llm_client.extract_text(prompt)
-            return self._parse_llm_response(response)
+            criteria = self._parse_llm_response(response)
+            
+            # Fallback: If LLM didn't extract limit but there's a number in text, force extraction
+            if criteria.get('limite') is None:
+                extracted_limit = self._extract_limit_fallback(filter_text)
+                if extracted_limit:
+                    criteria['limite'] = extracted_limit
+                    log_info(f"FALLBACK: Extracted limit {extracted_limit} via regex from '{filter_text}'")
+            
+            return criteria
             
         except Exception as e:
-            log_error(f"Erro ao extrair critérios com LLM: {str(e)}")
-            return {"usar_similaridade": True, "filtros": {}}
+            log_error(f"Error extracting criteria with LLM: {str(e)}")
+            # Try fallback even on error
+            fallback_limit = self._extract_limit_fallback(filter_text)
+            return {
+                "usar_similaridade": True, 
+                "limite": fallback_limit,
+                "filtros": {}
+            }
     
-    def search_candidates_semantic(
+    def _extract_limit_fallback(self, text: str) -> Optional[int]:
+        """
+        Extract limit by regex as fallback when LLM fails
+        """
+        import re
+        
+        # Patterns to extract candidate numbers
+        patterns = [
+            r'\b(?:me\s+)?(?:traga|busque|filtre|quero|encontre)\s+(\d+)\s*candidatos?\b',
+            r'\b(\d+)\s*candidatos?\b',
+            r'\btraga\s+(\d+)\b',
+            r'\bbusque\s+(\d+)\b'
+        ]
+        
+        text_lower = text.lower()
+        for pattern in patterns:
+            match = re.search(pattern, text_lower)
+            if match:
+                try:
+                    limit = int(match.group(1))
+                    if 1 <= limit <= 100:  # Reasonable limit
+                        return limit
+                except (ValueError, IndexError):
+                    continue
+        
+        return None
+    
+    def semantic_filter_candidates(
         self, 
         workbook_id: str, 
-        criteria: Dict[str, Any], 
-        limit: int = 20
+        criteria: Dict[str, Any]
     ) -> List[Dict]:
         """
-        Executa busca semântica de candidatos baseada nos critérios extraídos
+        MAIN METHOD: Semantic search + Python filters
+        
+        SIMPLIFIED STRATEGY:
+        1. Search large pool by semantic similarity
+        2. Filter with Python (more reliable than complex SQL)
+        3. Exclude candidates already in match prospects
+        4. Apply final limit
         """
         try:
-            log_info(f"search_candidates_semantic chamado com limit={limit}")
+            # Extrai limite dos critérios
+            limit = criteria.get('limite', 10)
+            
+            # Garantir que limit seja um número inteiro
+            if isinstance(limit, list) and limit:
+                limit = int(limit[0]) if str(limit[0]).isdigit() else 10
+            elif isinstance(limit, str) and limit.isdigit():
+                limit = int(limit)
+            elif not isinstance(limit, int) or limit <= 0:
+                limit = 10
+            
+            log_info(f"BUSCA SEMÂNTICA: workbook={workbook_id}, limite={limit}")
             
             # Obtém dados da vaga
             vaga_data = self._get_job_data(workbook_id)
             if not vaga_data:
-                log_error("Não foi possível obter dados da vaga")
+                log_error("Unable to retrieve job data")
                 return []
             
             vaga_id = criteria.get('vaga_id') or vaga_data.get('id')
             if not vaga_id:
-                log_error("Não foi possível determinar ID da vaga")
+                log_error("Unable to determine job ID")
                 return []
             
-            log_info(f"Usando vaga_id: {vaga_id} para busca semântica com limit: {limit}")
+            log_info(f"Using job_id: {vaga_id} for semantic search")
             
-            # Constrói e executa consulta SQL
-            query, params = self._build_semantic_query(vaga_id, criteria, limit)
+            # STEP 0: Busca candidatos já nos match prospects para referência
+            existing_prospect_ids = self._get_existing_prospect_ids(workbook_id)
+            selected_prospect_ids = self._get_selected_prospect_ids(workbook_id)
+            log_info(f"Candidatos já nos prospects: {len(existing_prospect_ids)}")
+            log_info(f"Candidatos selecionados (sinpre mostrar): {len(selected_prospect_ids)}")
             
-            log_info(f"Executando consulta semântica: {query}")
-            log_info(f"Parâmetros: {params}")
+            # STEP 1: Busca um POOL GRANDE excluindo apenas prospects NÃO selecionados
+            # Candidatos selecionados sinpre aparecin, mas exclui outros já nos prospects
+            non_selected_prospects = [pid for pid in existing_prospect_ids if pid not in selected_prospect_ids]
+            pool_size = max(1000, limit * 10)  # Garante pool suficiente
+            log_info(f"Excluding {len(non_selected_prospects)} non-selected prospects from search")
+            log_info(f"Searching pool of {pool_size} candidates for filtering")
             
-            result = self.db.execute(text(query), params)
+            base_query, base_params = self._build_base_semantic_query(vaga_id, pool_size, non_selected_prospects)
+            
+            log_info(f"Executando busca do pool: {base_query}")
+            log_info(f"Parameters: {base_params}")
+            
+            result = self.db.execute(text(base_query), base_params)
             candidates_raw = result.fetchall()
             
-            # Processa resultados
-            candidates = []
+            log_info(f"Pool inicial: {len(candidates_raw)} candidatos")
+            
+            # STEP 2: Processa candidatos in Python
+            all_candidates = []
             for candidate in candidates_raw:
                 try:
                     candidate_dict = self._process_candidate_row(candidate)
-                    candidates.append(candidate_dict)
+                    all_candidates.append(candidate_dict)
                 except Exception as e:
                     log_error(f"Erro ao processar candidato {candidate.id}: {str(e)}")
                     continue
             
-            log_info(f"Busca semântica retornou {len(candidates)} candidatos")
-            return candidates
+            log_info(f"Candidatos processados: {len(all_candidates)}")
+            
+            # STEP 3: Separa candidatos selecionados ANTES dos filtros
+            selected_candidates = []
+            non_selected_candidates = []
+            
+            for candidate in all_candidates:
+                if candidate['id'] in selected_prospect_ids:
+                    selected_candidates.append(candidate)  # Selecionados sinpre passam
+                else:
+                    non_selected_candidates.append(candidate)
+            
+            # Ordena candidatos selecionados por score sinântico DESC (maiores scores primeiro)
+            selected_candidates.sort(key=lambda x: x.get('score_semantico', 0.0), reverse=True)
+            
+            # Log dos scores dos candidatos selecionados
+            if selected_candidates:
+                log_info(f"Scores dos candidatos selecionados:")
+                for i, cand in enumerate(selected_candidates[:5]):  # Mostra só os 5 primeiros
+                    log_info(f"  {i+1}. {cand.get('nome', 'N/A')} (ID: {cand.get('id')}) - Score: {cand.get('score_semantico', 0.0):.3f}")
+            
+            log_info(f"Candidatos selecionados (sem filtros, ordenados por relevância): {len(selected_candidates)}")
+            log_info(f"Non-selected candidates for filtering: {len(non_selected_candidates)}")
+            
+            # STEP 4: Aplica filtros APENAS nos candidatos não selecionados
+            filtered_new_candidates = self._apply_python_filters(non_selected_candidates, criteria)
+            
+            # Ordena candidatos novos por score sinântico DESC (maiores scores primeiro)
+            filtered_new_candidates.sort(key=lambda x: x.get('score_semantico', 0.0), reverse=True)
+            
+            # Log dos scores dos candidatos novos
+            if filtered_new_candidates:
+                log_info(f"Scores dos candidatos novos (top 10):")
+                for i, cand in enumerate(filtered_new_candidates[:10]):
+                    log_info(f"  {i+1}. {cand.get('nome', 'N/A')} (ID: {cand.get('id')}) - Score: {cand.get('score_semantico', 0.0):.3f}")
+            
+            log_info(f"Non-selected candidates after filtering and sorting: {len(filtered_new_candidates)}")
+            
+            # STEP 5: Candidatos selecionados sempre aparecem + novos até o limite solicitado
+            # Selected ones DON'T count in limit - they are EXTRAS
+            final_result = selected_candidates + filtered_new_candidates[:limit]
+                
+            log_info(f"Resultado final: {len(selected_candidates)} selecionados (extras) + {len(filtered_new_candidates[:limit])} novos (limite) = {len(final_result)} total")
+            
+            return final_result
             
         except Exception as e:
             log_error(f"Erro na busca semântica: {str(e)}")
             return []
     
     def _build_extraction_prompt(self, filter_text: str) -> str:
-        """Constrói prompt para extração de critérios pelo LLM"""
+        """Build simple prompt for criteria extraction by LLM"""
         
         return f"""
 Analise esta solicitação de filtro de candidatos e extraia TODOS os critérios mencionados.
 
 Solicitação: "{filter_text}"
 
-REGRAS IMPORTANTES para LIMITE de candidatos:
-- Se mencionar número específico (ex: "filtre 4", "busque 10") → use esse número
-- Se for refinamento sem número (ex: "apenas os que têm inglês", "somente com Java") → use 10 como padrão
-- Se for busca genérica sem número → use 20 como padrão
+REGRAS PARA LIMITE (MUITO IMPORTANTE):
+- Se mencionar "me traga X candidatos", "busque X", "filtre X", "quero X candidatos" onde X é um número → use X como INTEGER
+- Exinplos: "me traga 6 candidatos" → limite: 6, "busque 10" → limite: 10, "filtre 5" → limite: 5
+- Se NÃO mencionar número → use null
+- LIMITE deve ser um número inteiro (6, 10, 5), nunca null quando há número explícito
 
-REGRAS para FILTROS:
-- APENAS extraia critérios específicos que estão EXPLICITAMENTE mencionados
-- SEMPRE use similaridade semântica (usar_similaridade: true)
+REGRAS PARA FILTROS:
+- Tecnologias como AWS, Java, Python, React → vão in "habilidades"
+- Idiomas como inglês, espanhol → vão in "idiomas"
+  * Para idiomas com level específico: {{"idioma": "inglês", "nivel_minimo": "avançado", "incluir_superiores": true}}
+  * Para idiomas sin level: "inglês"
+  * Níveis válidos: básico, intermediário, avançado, fluente
+- Localizações como São Paulo, Rio → vão in "localizacao"
+- SEMPRE use similaridade sinântica (usar_similaridade: true)
+
+EXEMPLOS CORRETOS:
+- "me traga 6 candidatos" → limite: 6, filtros: {{}}
+- "me traga 7 candidatos" → limite: 7, filtros: {{}}
+- "busque 10 candidatos" → limite: 10, filtros: {{}}
+- "busque candidatos com AWS" → habilidades: ["AWS"], limite: null
+- "5 candidatos com inglês" → habilidades: [], idiomas: ["inglês"], limite: 5
+- "candidatos com inglês avançado" → idiomas: [{{"idioma": "inglês", "nivel_minimo": "avançado", "incluir_superiores": true}}], limite: null
+- "inglês a partir de intermediário" → idiomas: [{{"idioma": "inglês", "nivel_minimo": "intermediário", "incluir_superiores": true}}], limite: null
 
 Retorne APENAS um JSON válido com esta estrutura:
 
-Para comandos com número específico:
 {{
     "vaga_id": null,
     "usar_similaridade": true,
-    "limite": 4,
+    "limite": null,
     "filtros": {{
         "idiomas": [],
         "habilidades": [],
@@ -117,49 +318,7 @@ Para comandos com número específico:
     }}
 }}
 
-Para refinamentos sem número (use 10):
-{{
-    "vaga_id": null,
-    "usar_similaridade": true,
-    "limite": 10,
-    "filtros": {{
-        "idiomas": [
-            {{"idioma": "inglês", "nivel_minimo": "básico", "incluir_superiores": true}}
-        ],
-        "habilidades": ["java"],
-        "formacao": {{}},
-        "experiencia": {{}},
-        "localizacao": null,
-        "sexo": null,
-        "outros": []
-    }}
-}}
-
-Exemplos de interpretação:
-- "filtre 4 candidatos" → limite: 4, filtros vazios
-- "apenas os que têm inglês básico" → limite: 10, filtro de inglês
-- "busque pessoas com Java" → limite: 10, filtro de Java
-- "mostre 15 candidatos" → limite: 15, filtros vazios
-
-Regras:
-- Palavras como "apenas", "somente", "que tenham" = refinamento → limite: 10
-- Número explícito sempre tem prioridade
-- Se mencionar "vaga [número]" → extraia para vaga_id
-- Para idiomas: ENTENDA HIERARQUIA DE NÍVEIS:
-  * básico < intermediário < avançado < fluente
-  * Se pedir "inglês básico", incluir superiores: true (básico, intermediário, avançado, fluente)
-  * Se pedir "inglês avançado", incluir superiores: true (avançado, fluente)  
-  * Se pedir especificamente "APENAS inglês básico", incluir superiores: false
-  * Múltiplos níveis: "inglês avançado ou fluente" = nivel_minimo: "avançado", incluir_superiores: true
-- Para habilidades: CAPTURE TODAS as tecnologias/ferramentas mencionadas (ex: "Java, Python e CSS" = ["java", "python", "css"])
-- Se não detectar um critério específico, não inclua no JSON
-- Normalize idiomas para português (english -> inglês)
-- Normalize níveis (advanced -> avançado, fluent -> fluente, basic -> básico, intermediate -> intermediário)
-- Extraia TODAS as habilidades técnicas mencionadas
-- Identifique requisitos de formação se mencionados
-- Detecte localização se mencionada
-- Identifique sexo se mencionado (masculino/feminino)
-- Para conectores como "ou", "e", "and", "or": SEMPRE inclua todas as opções mencionadas
+ATENÇÃO: Se a solicitação contém um número de candidatos, o "limite" DEVE ser esse número, não null!
 
 JSON:"""
     
@@ -170,70 +329,143 @@ JSON:"""
         if json_match:
             json_str = json_match.group(0)
             criteria = json.loads(json_str)
+            
+            # Corrige o formato do limite se necessário
+            if 'limite' in criteria:
+                limite = criteria['limite']
+                if isinstance(limite, list) and limite:
+                    # Se é uma lista, pega o primeiro elinento
+                    criteria['limite'] = int(limite[0]) if str(limite[0]).isdigit() else None
+                elif isinstance(limite, str) and limite.isdigit():
+                    # If it's numeric string, convert to int
+                    criteria['limite'] = int(limite)
+                elif not isinstance(limite, (int, type(None))):
+                    # Se não é int nin None, define como None
+                    criteria['limite'] = None
+            
             log_info(f"LLM extraiu critérios: {criteria}")
             return criteria
         else:
-            log_error(f"LLM não retornou JSON válido: {response}")
+            log_error(f"LLM did not return valid JSON: {response}")
             return {"usar_similaridade": True, "filtros": {}}
     
-    def _build_semantic_query(self, vaga_id: int, criteria: Dict[str, Any], limit: int) -> tuple:
-        """Constrói consulta SQL para busca semântica"""
+    def _build_base_semantic_query(self, vaga_id: int, pool_size: int, exclude_prospect_ids: List[int] = None) -> tuple:
+        """Constrói consulta SQL base APENAS com similaridade sinântica (sin filtros específicos)"""
+        
+        query = """SELECT pa.id, pa.nome, pa.email, pa.endereco, pa.nivel_maximo_formacao,
+       pa.cv_pt_json, pa.cv_texto_semantico, pa.updated_at,
+       pa.cv_embedding_vector <=> v.vaga_embedding_vector AS distancia
+FROM processed_applicants pa, vagas v
+WHERE v.id = :vaga_id
+  AND pa.cv_embedding_vector IS NOT NULL
+  AND v.vaga_embedding_vector IS NOT NULL"""
+        
+        params = {"vaga_id": vaga_id, "pool_size": pool_size}
+        
+        # Adiciona exclusão de candidatos já nos prospects
+        if exclude_prospect_ids:
+            placeholders = ','.join([f':exclude_id_{i}' for i in range(len(exclude_prospect_ids))])
+            query += f" AND pa.id NOT IN ({placeholders})"
+            
+            for i, candidate_id in enumerate(exclude_prospect_ids):
+                params[f'exclude_id_{i}'] = candidate_id
+        
+        query += " ORDER BY distancia ASC LIMIT :pool_size"
+        
+        return query, params
+
+    def _get_existing_prospect_ids(self, workbook_id: str) -> List[int]:
+        """Busca IDs dos candidatos que já estão nos match prospects"""
+        try:
+            from app.models.match_prospect import MatchProspect
+            
+            prospects = self.db.query(MatchProspect.applicant_id).filter(
+                MatchProspect.workbook_id == workbook_id
+            ).all()
+            
+            prospect_ids = [prospect.applicant_id for prospect in prospects]
+            log_info(f"Found {len(prospect_ids)} candidatos já nos prospects: {prospect_ids}")
+            return prospect_ids
+            
+        except Exception as e:
+            log_error(f"Erro ao buscar prospects existentes: {str(e)}")
+            return []
+
+    def _get_selected_prospect_ids(self, workbook_id: str) -> List[int]:
+        """Busca IDs dos candidatos que estão selecionados nos match prospects"""
+        try:
+            from app.models.match_prospect import MatchProspect
+            
+            prospects = self.db.query(MatchProspect.applicant_id).filter(
+                MatchProspect.workbook_id == workbook_id,
+                MatchProspect.selecionado == True
+            ).all()
+            
+            prospect_ids = [prospect.applicant_id for prospect in prospects]
+            log_info(f"Found {len(prospect_ids)} candidatos selecionados: {prospect_ids}")
+            return prospect_ids
+            
+        except Exception as e:
+            log_error(f"Erro ao buscar prospects selecionados: {str(e)}")
+            return []
+
+    def _apply_python_filters(self, candidates: List[Dict], criteria: Dict[str, Any]) -> List[Dict]:
+        """Aplica filtros específicos in Python sobre a lista de candidatos"""
         filtros = criteria.get('filtros', {})
+        filtered = candidates.copy()
         
-        # Query base com similaridade semântica
-        query_parts = [
-            "SELECT pa.id, pa.nome, pa.email, pa.endereco, pa.nivel_maximo_formacao,",
-            "       pa.cv_pt_json, pa.cv_texto_semantico, pa.updated_at,",
-            "       pa.cv_embedding_vector <=> v.vaga_embedding_vector AS distancia",
-            "FROM processed_applicants pa, vagas v",
-            "WHERE v.id = :vaga_id",
-            "  AND pa.cv_embedding_vector IS NOT NULL",
-            "  AND v.vaga_embedding_vector IS NOT NULL"
-        ]
-        
-        params = {"vaga_id": vaga_id}
-        
-        # Adiciona filtros específicos
+        # Filtra por idiomas
         if filtros.get('idiomas'):
-            idiomas_conditions = self._build_language_filters(filtros['idiomas'])
-            if idiomas_conditions:
-                query_parts.append(f"  AND ({' OR '.join(idiomas_conditions)})")
-        
+            filtered = self._filter_by_languages(filtered, filtros['idiomas'])
+            
+        # Filtra por habilidades
         if filtros.get('habilidades'):
-            skills_conditions = self._build_skills_filters(filtros['habilidades'])
-            if skills_conditions:
-                query_parts.append(f"  AND ({' OR '.join(skills_conditions)})")
-        
+            filtered = self._filter_by_skills(filtered, filtros['habilidades'])
+            
+        # Filtra por formação
         if filtros.get('formacao'):
-            education_conditions = self._build_education_filters(filtros['formacao'])
-            query_parts.extend(education_conditions)
-        
+            filtered = self._filter_by_education(filtered, filtros['formacao'])
+            
+        # Filtra por localização
         if filtros.get('localizacao'):
-            location = filtros['localizacao'].lower()
-            query_parts.append("  AND LOWER(pa.endereco) LIKE :localizacao")
-            params['localizacao'] = f'%{location}%'
-        
+            filtered = self._filter_by_location(filtered, filtros['localizacao'])
+            
+        # Filtra por sexo
         if filtros.get('sexo'):
-            gender = filtros['sexo'].lower()
-            query_parts.append("  AND LOWER(pa.sexo) = :sexo")
-            params['sexo'] = gender
+            filtered = self._filter_by_gender(filtered, filtros['sexo'])
         
-        # Ordenação por similaridade semântica e limite
-        query_parts.append("ORDER BY distancia ASC")
+        return filtered
+
+    def _filter_by_languages(self, candidates: List[Dict], language_filters: List) -> List[Dict]:
+        """Filtra candidatos por idiomas in Python"""
+        if not language_filters:
+            return candidates
         
-        # Só adiciona LIMIT se o valor for válido
-        if limit is not None and limit > 0:
-            query_parts.append(f"LIMIT {limit}")
-        else:
-            query_parts.append("LIMIT 20")  # valor padrão
+        log_info(f"Filtrando por idiomas: {language_filters}")
         
-        return "\n".join(query_parts), params
-    
-    def _build_language_filters(self, language_filters: List[Dict]) -> List[str]:
-        """Constrói filtros SQL para idiomas com hierarquia de níveis"""
-        conditions = []
+        # Processa diferentes formatos de entrada
+        processed_filters = []
+        for lang_filter in language_filters:
+            if isinstance(lang_filter, dict) and lang_filter.get('idioma'):
+                # Formato correto: {'idioma': 'inglês', 'nivel_minimo': 'intermediário'}
+                processed_filters.append(lang_filter)
+            elif isinstance(lang_filter, str):
+                # Formato simples: 'inglês' ou 'ingles'
+                processed_filters.append({
+                    'idioma': lang_filter,
+                    'nivel_minimo': None,
+                    'incluir_superiores': True
+                })
         
-        # Hierarquia de níveis de idiomas
+        if not processed_filters:
+            log_info("Nenhum filtro de idioma válido encontrado")
+            return candidates
+        
+        log_info(f"Filters processados: {processed_filters}")
+        
+        filtered = []
+        
+        # Hierarquia de níveis
         level_hierarchy = {
             'básico': ['básico', 'intermediário', 'avançado', 'fluente'],
             'basico': ['básico', 'intermediário', 'avançado', 'fluente'],
@@ -244,81 +476,134 @@ JSON:"""
             'fluente': ['fluente']
         }
         
-        # Padrões de variação de níveis
-        level_patterns = {
-            'básico': ['básico', 'basico', 'basic'],
-            'intermediário': ['intermediário', 'intermediario', 'intermediate'],
-            'avançado': ['avançado', 'avancado', 'advanced'],
-            'fluente': ['fluente', 'fluent']
-        }
-        
-        for lang_req in language_filters:
-            language = lang_req.get('idioma', '').lower()
-            min_level = lang_req.get('nivel_minimo', '').lower()
-            include_higher = lang_req.get('incluir_superiores', True)
+        for candidate in candidates:
+            cv_data = candidate.get('cv_pt', {})
+            candidate_languages = cv_data.get('idiomas', [])
             
-            if language and min_level:
-                # Determina níveis aceitos
-                if include_higher and min_level in level_hierarchy:
-                    accepted_levels = level_hierarchy[min_level]
-                else:
-                    accepted_levels = [min_level]
+            # Verifica se atende a PELO MENOS UM dos requisitos de idioma
+            meets_language_req = False
+            
+            for lang_req in processed_filters:
+                required_lang = str(lang_req.get('idioma', '')).lower()
+                required_level = str(lang_req.get('nivel_minimo', '') or '').lower()
+                include_higher = lang_req.get('incluir_superiores', True)
                 
-                # Cria condições para cada nível aceito
-                level_conditions = []
-                for level in accepted_levels:
-                    patterns = level_patterns.get(level, [level])
-                    for pattern in patterns:
-                        level_conditions.append(f"@.nivel like_regex \"{pattern}\" flag \"i\"")
+                # Mapeia variações do inglês
+                if required_lang in ['ingles', 'inglês', 'english']:
+                    required_lang = 'inglês'
                 
-                level_query = f"({' || '.join(level_conditions)})"
+                log_info(f"Checking candidate {candidate.get('nome', 'N/A')} for language '{required_lang}' minimum level '{required_level}'")
+                log_info(f"Idiomas do candidato: {candidate_languages}")
                 
-                conditions.append(
-                    f"jsonb_path_exists(pa.cv_pt_json, "
-                    f"'$.idiomas[*] ? (@.idioma like_regex \"{language}\" flag \"i\" && {level_query})')"
-                )
-            elif language:
-                # Apenas idioma, sem nível específico
-                conditions.append(
-                    f"jsonb_path_exists(pa.cv_pt_json, "
-                    f"'$.idiomas[*] ? (@.idioma like_regex \"{language}\" flag \"i\")')"
-                )
+                for cand_lang in candidate_languages:
+                    if not isinstance(cand_lang, dict):
+                        continue
+                        
+                    cand_lang_name = str(cand_lang.get('idioma', '')).lower()
+                    cand_lang_level = str(cand_lang.get('nivel', '')).lower()
+                    
+                    # Normaliza variações do inglês
+                    if cand_lang_name in ['ingles', 'inglês', 'english']:
+                        cand_lang_name = 'inglês'
+                    
+                    # Verifica se é o idioma correto
+                    if required_lang in cand_lang_name or cand_lang_name in required_lang or required_lang == cand_lang_name:
+                        
+                        if not required_level:  # Só idioma, sin level
+                            meets_language_req = True
+                            log_info(f"MATCH: {candidate.get('nome', 'N/A')} has {cand_lang_name}")
+                            break
+                            
+                        # Verifica level
+                        if include_higher and required_level in level_hierarchy:
+                            accepted_levels = level_hierarchy[required_level]
+                            # Verifica se o level do candidato está na lista de níveis aceitos
+                            if any(accepted_level.lower() == cand_lang_level.strip().lower() for accepted_level in accepted_levels):
+                                meets_language_req = True
+                                log_info(f"MATCH: {candidate.get('nome', 'N/A')} has {cand_lang_name} level {cand_lang_level} (accepted for {required_level})")
+                                break
+                        elif required_level.lower() == cand_lang_level.strip().lower():
+                            meets_language_req = True
+                            log_info(f"MATCH: {candidate.get('nome', 'N/A')} has {cand_lang_name} level {cand_lang_level} (exato)")
+                            break
+                        else:
+                            log_info(f"REJECT: {candidate.get('nome', 'N/A')} has {cand_lang_name} level '{cand_lang_level}' mas precisa de '{required_level}' ou superior")
+                
+                if meets_language_req:
+                    break
+            
+            if meets_language_req:
+                filtered.append(candidate)
         
-        return conditions
-    
-    def _build_skills_filters(self, skills: List[str]) -> List[str]:
-        """Constrói filtros SQL para habilidades"""
-        conditions = []
+        log_info(f"Filter de idiomas: {len(candidates)} candidatos -> {len(filtered)} filtrados")
+        return filtered
+
+    def _filter_by_skills(self, candidates: List[Dict], skills: List[str]) -> List[Dict]:
+        """Filtra candidatos por habilidades in Python"""
+        if not skills:
+            return candidates
         
-        for skill in skills:
-            skill_clean = skill.lower().strip()
-            if skill_clean:
-                conditions.append(
-                    f"jsonb_path_exists(pa.cv_pt_json, "
-                    f"'$.habilidades[*] ? (@ like_regex \"{skill_clean}\" flag \"i\")')"
-                )
+        # Filtra apenas strings válidas
+        valid_skills = [skill for skill in skills if isinstance(skill, str) and skill.strip()]
         
-        return conditions
-    
-    def _build_education_filters(self, education: Dict) -> List[str]:
-        """Constrói filtros SQL para formação"""
-        conditions = []
+        if not valid_skills:
+            return candidates
+            
+        filtered = []
         
-        if education.get('nivel'):
-            level = education['nivel'].lower()
-            conditions.append(
-                f"  AND jsonb_path_exists(pa.cv_pt_json, "
-                f"'$.formacoes[*] ? (@.nivel like_regex \"{level}\" flag \"i\")')"
-            )
+        for candidate in candidates:
+            cv_data = candidate.get('cv_pt', {})
+            candidate_skills = cv_data.get('habilidades', [])
+            candidate_skills_text = ' '.join(str(skill) for skill in candidate_skills if skill).lower()
+            
+            # Verifica se has PELO MENOS UMA das habilidades
+            has_skill = False
+            for required_skill in valid_skills:
+                if required_skill.lower() in candidate_skills_text:
+                    has_skill = True
+                    break
+            
+            if has_skill:
+                filtered.append(candidate)
         
-        if education.get('curso'):
-            course = education['curso'].lower()
-            conditions.append(
-                f"  AND jsonb_path_exists(pa.cv_pt_json, "
-                f"'$.formacoes[*] ? (@.curso like_regex \"{course}\" flag \"i\")')"
-            )
+        return filtered
+
+    def _filter_by_education(self, candidates: List[Dict], education: Dict) -> List[Dict]:
+        """Filtra candidatos por formação in Python"""
+        if not education:
+            return candidates
+            
+        # Implementar se necessário
+        return candidates
+
+    def _filter_by_location(self, candidates: List[Dict], location: str) -> List[Dict]:
+        """Filtra candidatos por localização in Python"""
+        if not location or not isinstance(location, str):
+            return candidates
+            
+        filtered = []
+        location_lower = location.lower()
         
-        return conditions
+        for candidate in candidates:
+            candidate_location = str(candidate.get('endereco', '')).lower()
+            if location_lower in candidate_location:
+                filtered.append(candidate)
+        
+        return filtered
+
+    def _filter_by_gender(self, candidates: List[Dict], gender: str) -> List[Dict]:
+        """Filtra candidatos por sexo in Python"""
+        if not gender or not isinstance(gender, str):
+            return candidates
+            
+        # Implementar se necessário (campo sexo não está no modelo atual)
+        return candidates
+
+    # MÉTODOS OBSOLETOS REMOVIDOS:
+    # - _build_semantic_query() → substituído por _build_base_semantic_query() + Python filters
+    # - _build_language_filters() → substituído por _filter_by_languages()  
+    # - _build_skills_filters() → substituído por _filter_by_skills()
+    # - _build_education_filters() → substituído por _filter_by_education()
     
     def _process_candidate_row(self, candidate) -> Dict:
         """Processa linha de candidato da consulta SQL"""
@@ -335,7 +620,7 @@ JSON:"""
             'cv_pt': cv_data,
             'score_semantico': float(1 - candidate.distancia),
             'distancia': float(candidate.distancia),
-            'origem': 'semantic_search_service'
+            'origin': 'semantic_search_service'
         }
     
     def _get_job_data(self, workbook_id: str) -> Optional[Dict]:
@@ -375,7 +660,7 @@ JSON:"""
         try:
             from app.models.match_prospect import MatchProspect
             
-            # Remove prospects existentes
+            # Rinove prospects existentes
             self.db.query(MatchProspect).filter(
                 MatchProspect.workbook_id == workbook_id
             ).delete()
@@ -386,13 +671,13 @@ JSON:"""
                     workbook_id=workbook_id,
                     applicant_id=candidate['id'],
                     score_semantico=candidate.get('score_semantico', 0.5),
-                    origem=candidate.get('origem', 'semantic_search'),
+                    origem=candidate.get('origin', 'semantic_search'),
                     selecionado=False
                 )
                 self.db.add(match_prospect)
             
             self.db.commit()
-            log_info(f"Salvos {len(candidates)} prospects semânticos para workbook {workbook_id}")
+            log_info(f"Saved {len(candidates)} semantic prospects for workbook {workbook_id}")
             
         except Exception as e:
             log_error(f"Erro ao salvar prospects: {str(e)}")

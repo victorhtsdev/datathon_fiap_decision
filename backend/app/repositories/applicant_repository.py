@@ -19,7 +19,7 @@ class ApplicantRepository:
             for field, value in applicant_dict.items():
                 if hasattr(db_obj, field):
                     setattr(db_obj, field, value)
-            db_obj.cv_pt_json = final_json  # <-- Corrigido: salva dict diretamente
+            db_obj.cv_pt_json = final_json  
             db_obj.nivel_maximo_formacao = max_education_level
             db_obj.updated_at = now
             if cv_texto_semantico is not None:
@@ -33,7 +33,7 @@ class ApplicantRepository:
             model_fields = {k: v for k, v in applicant_dict.items() if k != "cv_pt" and hasattr(ProcessedApplicant, k)}
             db_obj = ProcessedApplicant(
                 **model_fields,
-                cv_pt_json=final_json,  # <-- Corrigido: salva dict diretamente
+                cv_pt_json=final_json,  
                 nivel_maximo_formacao=max_education_level,
                 cv_texto_semantico=cv_texto_semantico,
                 cv_embedding=cv_embedding,

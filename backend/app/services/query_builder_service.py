@@ -3,24 +3,24 @@ from app.core.logging import log_info, log_error
 
 class QueryBuilderService:
     """
-    Service responsável por construir queries SQL baseadas em critérios extraídos
+    Service responsável por construir queries SQL baseadas in critérios extraídos
     """
     
-    def build_semantic_query(
+    def build_sinantic_query(
         self, 
         vaga_id: int, 
         filtros: Dict[str, Any], 
-        limit: int = 20,
+        limit: int = 10,
         candidate_ids: List[str] = None
     ) -> Tuple[str, Dict[str, Any]]:
         """
-        Constrói query SQL com filtros semânticos
+        Constrói query SQL com filtros sinânticos
         
         Args:
             vaga_id: ID da vaga
-            filtros: Filtros extraídos pelo LLM
+            filtros: Filters extraídos pelo LLM
             limit: Limite de resultados
-            candidate_ids: IDs específicos de candidatos (para filtro incremental)
+            candidate_ids: IDs específicos de candidatos (para filtro incrinental)
             
         Returns:
             Tupla com (query_string, parameters)
@@ -29,7 +29,7 @@ class QueryBuilderService:
             query_parts = self._build_base_query()
             params = {"vaga_id": vaga_id}
             
-            # Restringe a candidatos específicos se fornecido (modo incremental)
+            # Restringe a candidatos específicos se fornecido (modo incrinental)
             if candidate_ids:
                 candidate_ids_str = ','.join(candidate_ids)
                 query_parts.append(f"  AND pa.id IN ({candidate_ids_str})")
@@ -111,7 +111,7 @@ class QueryBuilderService:
             )
     
     def _get_level_conditions(self, nivel_minimo: str, incluir_superiores: bool) -> List[str]:
-        """Retorna condições de nível baseadas na hierarquia"""
+        """Retorna condições de level baseadas na hierarquia"""
         hierarquia_niveis = {
             'básico': ['básico', 'intermediário', 'avançado', 'fluente'],
             'basico': ['básico', 'intermediário', 'avançado', 'fluente'],
@@ -136,7 +136,7 @@ class QueryBuilderService:
         return conditions
     
     def _get_level_patterns(self, nivel: str) -> List[str]:
-        """Retorna padrões de busca para um nível específico"""
+        """Retorna padrões de busca para um level específico"""
         patterns_map = {
             'básico': ['básico', 'basico', 'basic'],
             'intermediário': ['intermediário', 'intermediario', 'intermediate'],

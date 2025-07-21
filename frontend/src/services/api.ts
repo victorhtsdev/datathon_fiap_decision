@@ -1,4 +1,18 @@
-import type { Vaga, VagaDetalhada, Workbook, Applicant } from '../types/api';
+import type { 
+  Vaga, 
+  VagaDetalhada, 
+  Workbook, 
+  Applicant, 
+  MatchProspect, 
+  MatchProspectData, 
+  ApplicantProspect, 
+  ProspectMatchByWorkbook, 
+  ProspectMatchByVaga, 
+  WorkbookProspectSummary,
+  SemanticPerformanceResponse,
+  CacheClearResponse,
+  SemanticPerformanceInfo
+} from '../types/api';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -94,6 +108,32 @@ class ApiService {
     });
   }
 
+  // Match Prospects
+  getMatchProspects = async (workbookId: string): Promise<MatchProspect[]> => {
+    return this.fetchApi<MatchProspect[]>(`/workbook/${workbookId}/match-prospects`);
+  }
+
+  updateMatchProspects = async (
+    workbookId: string, 
+    prospects: MatchProspectData[]
+  ): Promise<{ message: string; workbook_id: string; prospects_count: number }> => {
+    return this.fetchApi<{ message: string; workbook_id: string; prospects_count: number }>(
+      `/workbook/${workbookId}/match-prospects`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ prospects }),
+      }
+    );
+  }
+
+  // Applicants
+  getApplicantsByIds = async (applicantIds: number[]): Promise<Applicant[]> => {
+    return this.fetchApi<Applicant[]>('/get_applicants_by_ids', {
+      method: 'POST',
+      body: JSON.stringify({ applicant_ids: applicantIds }),
+    });
+  }
+
   // Chat
   sendChatMessage = async (
     message: string, 
@@ -121,9 +161,41 @@ class ApiService {
       }),
     });
   }
+
+  // Prospects Match
+  getProspectsByWorkbook = async (workbookId: string): Promise<ProspectMatchByWorkbook> => {
+    return this.fetchApi<ProspectMatchByWorkbook>(`/prospects-match/by-workbook/${workbookId}`);
+  }
+
+  getProspectsByVaga = async (vagaId: number): Promise<ProspectMatchByVaga> => {
+    return this.fetchApi<ProspectMatchByVaga>(`/prospects-match/by-vaga/${vagaId}`);
+  }
+
+  searchProspectsByName = async (name: string, limit: number = 50): Promise<ApplicantProspect[]> => {
+    return this.fetchApi<ApplicantProspect[]>(`/prospects-match/search/by-name?name=${encodeURIComponent(name)}&limit=${limit}`);
+  }
+
+  getWorkbooksWithProspectsSummary = async (): Promise<{ total_workbooks: number; workbooks: WorkbookProspectSummary[] }> => {
+    return this.fetchApi<{ total_workbooks: number; workbooks: WorkbookProspectSummary[] }>('/prospects-match/workbooks/summary');
+  }
+
+  // Análise de Performance Semântica
+  getSemanticPerformanceAnalysis = async (): Promise<SemanticPerformanceResponse> => {
+    return this.fetchApi<SemanticPerformanceResponse>('/api/analytics/semantic-performance');
+  }
+
+  clearSemanticPerformanceCache = async (): Promise<CacheClearResponse> => {
+    return this.fetchApi<CacheClearResponse>('/api/analytics/semantic-performance/cache', {
+      method: 'DELETE',
+    });
+  }
+
+  getSemanticPerformanceInfo = async (): Promise<SemanticPerformanceInfo> => {
+    return this.fetchApi<SemanticPerformanceInfo>('/api/analytics/semantic-performance/info');
+  }
 }
 
-// Criar uma instância e export como default
+// Criar uma instância e exportar como padrão
 const apiServiceInstance = new ApiService();
 export const apiService = apiServiceInstance;
 export default apiServiceInstance;

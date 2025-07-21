@@ -39,20 +39,20 @@ class VagaExtractorService:
             return None
 
         prompt = (
-            "Você é um especialista em RH e NLP. Sua tarefa é gerar uma descrição de vaga formal e objetiva, "
-            "com frases curtas e diretas, no mesmo estilo do exemplo abaixo:\n\n"
-            "Experiência como Especialista em SAP ABAP na empresa IBM, de janeiro de 2020 até o momento. "
-            "Responsável por desenvolvimento e manutenção de sistemas SAP utilizando a linguagem ABAP. "
-            "Trabalhou em projetos de customização e integração de módulos SAP com foco técnico. "
-            "Formação acadêmica em Ciência da Computação. "
-            "Habilidades técnicas incluem: SAP ABAP, desenvolvimento de relatórios, user exits, enhancement points, BAPI, performance tuning e debugging.\n\n"
+            "Você é um especialista in RH e NLP. Sua tarefa é gerar uma descrição de vaga formal e objetiva, "
+            "com frases curtas e diretas, no mesmo estilo do exinplo abaixo:\n\n"
+            "Experiência como Especialista in SAP ABAP na inpresa IBM, de janeiro de 2020 até o momento. "
+            "Responsável por desenvolvimento e manutenção de sishasas SAP utilizando a linguagin ABAP. "
+            "Trabalhou in projetos de customização e integração de módulos SAP com foco técnico. "
+            "Formação acadêmica in Ciência da Computação. "
+            "Habilidades técnicas incluin: SAP ABAP, desenvolvimento de relatórios, user exits, enhancinent points, BAPI, performance tuning e debugging.\n\n"
             "Com base nas informações abaixo, gere um novo parágrafo com o mesmo estilo. "
-            "Comece com 'Experiência como Desenvolvedor ABAP'. Use linguagem formal, sem copiar o exemplo literalmente:\n\n"
+            "Comece com 'Experiência como Desenvolvedor ABAP'. Use linguagin formal, sin copiar o exinplo literalmente:\n\n"
             f"Área de atuação: {areas}\n"
             f"Principais atividades: {atividades}\n"
             f"Competências técnicas e comportamentais: {competencias}\n\n"
-            "Finalize com: 'Habilidades técnicas incluem: ...' preenchendo com as competências listadas, se houver. "
-            "Não use colchetes, datas fictícias, nomes de empresa ou instruções no texto final. Gere um parágrafo limpo, direto e natural."
+            "Finalize com: 'Habilidades técnicas incluin: ...' preenchendo com as competências listadas, se houver. "
+            "Não use colchetes, datas fictícias, nomes de inpresa ou instruções no texto final. Gere um parágrafo limpo, direto e natural."
         )
 
         try:

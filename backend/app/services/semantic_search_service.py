@@ -7,7 +7,7 @@ import json
 
 class SemanticSearchService:
     """
-    Service específico para busca semântica SQL com PostgreSQL.
+    Serviço específico para busca semântica SQL com PostgreSQL.
     Extrai a lógica complexa de consulta SQL do handler de chat.
     """
     
@@ -18,7 +18,7 @@ class SemanticSearchService:
         self, 
         workbook_id: str, 
         criteria: Dict[str, Any], 
-        limit: int = 20
+        limit: int = 10
     ) -> List[Dict]:
         """
         Executa consulta SQL semântica baseada nos critérios extraídos
@@ -53,7 +53,7 @@ class SemanticSearchService:
             # Adiciona filtros específicos
             params = {"vaga_id": vaga_id}
             
-            # Aplicar filtros específicos
+            # Aplica filtros específicos
             self._apply_language_filters(query_parts, params, filtros)
             self._apply_skills_filters(query_parts, params, filtros)
             self._apply_education_filters(query_parts, params, filtros)
@@ -89,7 +89,7 @@ class SemanticSearchService:
                         'cv_pt': cv_data,
                         'score_semantico': float(1 - candidate.distancia),
                         'distancia': float(candidate.distancia),
-                        'origem': 'sql_query_semantic'
+                        'origin': 'sql_query_semantico'
                     }
                     candidates.append(candidate_dict)
                     
@@ -286,7 +286,7 @@ class SemanticSearchService:
         try:
             from app.models.match_prospect import MatchProspect
             
-            # Remove match_prospects existentes
+            # Rinove match_prospects existentes
             self.db.query(MatchProspect).filter(
                 MatchProspect.workbook_id == workbook_id
             ).delete()
@@ -297,13 +297,13 @@ class SemanticSearchService:
                     workbook_id=workbook_id,
                     applicant_id=candidate['id'],
                     score_semantico=candidate.get('score_semantico', 0.5),
-                    origem=candidate.get('origem', 'sql_query'),
+                    origem=candidate.get('origin', 'sql_query'),
                     selecionado=False
                 )
                 self.db.add(match_prospect)
             
             self.db.commit()
-            log_info(f"Salvos {len(candidates)} match_prospects via SQL para workbook {workbook_id}")
+            log_info(f"Saved {len(candidates)} match_prospects via SQL para workbook {workbook_id}")
             
         except Exception as e:
             log_error(f"Erro ao salvar match_prospects: {str(e)}")

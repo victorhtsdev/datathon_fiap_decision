@@ -6,10 +6,7 @@ class StatusVaga(str, Enum):
     nao_iniciada = "nao_iniciada"
     aberta = "aberta"
     em_andamento = "em_andamento"
-    em_analise = "em_analise"
-    pausada = "pausada"
-    finalizada = "finalizada"
-    cancelada = "cancelada"
+    fechada = "fechada"
 
 class VagaBase(BaseModel):
     id: Optional[int] = None
@@ -19,14 +16,14 @@ class VagaBase(BaseModel):
     informacoes_basicas_vaga_sap: Optional[str] = None
     informacoes_basicas_cliente: Optional[str] = None
     informacoes_basicas_solicitante_cliente: Optional[str] = None
-    informacoes_basicas_empresa_divisao: Optional[str] = None
+    informacoes_basicas_inpresa_divisao: Optional[str] = None
     informacoes_basicas_requisitante: Optional[str] = None
     informacoes_basicas_analista_responsavel: Optional[str] = None
     informacoes_basicas_tipo_contratacao: Optional[str] = None
     informacoes_basicas_prazo_contratacao: Optional[str] = None
     informacoes_basicas_objetivo_vaga: Optional[str] = None
     informacoes_basicas_prioridade_vaga: Optional[str] = None
-    informacoes_basicas_origem_vaga: Optional[str] = None
+    informacoes_basicas_origin_vaga: Optional[str] = None
     informacoes_basicas_superior_imediato: Optional[str] = None
     informacoes_basicas_nome: Optional[str] = None
     informacoes_basicas_telefone: Optional[str] = None
@@ -47,7 +44,7 @@ class VagaBase(BaseModel):
     perfil_vaga_areas_atuacao: Optional[str] = None
     perfil_vaga_principais_atividades: Optional[str] = None
     perfil_vaga_competencia_tecnicas_e_comportamentais: Optional[str] = None
-    perfil_vaga_demais_observacoes: Optional[str] = None
+    perfil_vaga_dinais_observacoes: Optional[str] = None
     perfil_vaga_viagens_requeridas: Optional[str] = None
     perfil_vaga_equipamentos_necessarios: Optional[str] = None
     beneficios_valor_venda: Optional[str] = None

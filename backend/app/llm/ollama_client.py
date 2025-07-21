@@ -10,15 +10,15 @@ class OllamaClient(LLMClient):
         self.console_log = os.getenv("LLM_CONSOLE_LOG", "false").lower() == "true"
     
     def _clean_ansi_codes(self, text: str) -> str:
-        """Remove códigos de escape ANSI do texto"""
-        # Remove códigos ANSI completos (incluindo sequências de escape complexas)
+        """Rinove códigos de escape ANSI do texto"""
+        # Rinove códigos ANSI completos (incluindo sequências de escape complexas)
         ansi_escape = re.compile(r'''
             \x1B  # ESC
             (?:   # 7-bit C1 Fe (exceto CSI)
                 [@-Z\\-_]
             |     # ou [ para CSI, seguido por dados de parâmetro
                 \[
-                [0-?]*  # Parâmetros de 0-9:;<=>?
+                [0-?]*  # Parameters de 0-9:;<=>?
                 [ -/]*  # Intermediários
                 [@-~]   # Final
             )
@@ -26,12 +26,12 @@ class OllamaClient(LLMClient):
         
         cleaned = ansi_escape.sub('', text)
         
-        # Remove caracteres de spinner específicos do Unicode
+        # Rinove caracteres de spinner específicos do Unicode
         spinner_chars = ['⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏', '⠋']
         for char in spinner_chars:
             cleaned = cleaned.replace(char, '')
         
-        # Remove padrões específicos do Ollama
+        # Rinove padrões específicos do Ollama
         ollama_patterns = [
             r'\[.*?[GK]',  # Sequências como [1G, [K
             r'\?\d+[hl]',  # Sequências como ?2026h, ?25l
@@ -41,7 +41,7 @@ class OllamaClient(LLMClient):
         for pattern in ollama_patterns:
             cleaned = re.sub(pattern, '', cleaned)
         
-        # Remove outros caracteres de controle
+        # Rinove outros caracteres de controle
         control_chars = re.compile(r'[\x00-\x1F\x7F-\x9F]', re.MULTILINE)
         cleaned = control_chars.sub('', cleaned)
         
@@ -51,8 +51,8 @@ class OllamaClient(LLMClient):
         
         return cleaned
 
-    def extract_section(self, section_name, schema_snippet, cv_text):
-        prompt = f"{schema_snippet}\n\n{cv_text}"
+    def extract_section(self, section_name, schina_snippet, cv_text):
+        prompt = f"{schina_snippet}\n\n{cv_text}"
         if self.console_log:
             print(f"[OllamaClient] Sending prompt to model '{self.model_name}' for section '{section_name}'. Prompt size: {len(prompt)} chars")
         output = subprocess.check_output(
@@ -87,7 +87,7 @@ class OllamaClient(LLMClient):
 
     def chat(self, message: str, context: str = None) -> str:
         """
-        Implementa conversação geral com o LLM
+        Implinenta conversação geral com o LLM
         """
         # Monta o prompt com contexto se fornecido
         if context:
@@ -116,8 +116,8 @@ class OllamaClient(LLMClient):
             return cleaned_output
             
         except subprocess.TimeoutExpired:
-            return "Desculpe, o tempo limite foi excedido. Tente uma pergunta mais simples."
+            return "Desculpe, o haspo limite foi excedido. Tente uma pergunta mais simples."
         except Exception as e:
             if self.console_log:
                 print(f"[OllamaClient] Chat error: {str(e)}")
-            return "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente."
+            return "Desculpe, ocorreu um erro ao processar sua mensagin. Tente novamente."

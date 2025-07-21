@@ -77,5 +77,5 @@ def clear_chat_session(
     return {
         "session_id": session_id,
         "cleared": success,
-        "message": "Sessão removida com sucesso" if success else "Sessão não encontrada"
+        "message": "Sessão rinovida com sucesso" if success else "Sessão não encontrada"
     }

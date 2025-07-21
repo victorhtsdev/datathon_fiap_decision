@@ -18,14 +18,14 @@ class CandidateRepository:
         
         Args:
             query: Query SQL para executar
-            params: Parâmetros da query
+            params: Parameters da query
             
         Returns:
             Lista de candidatos processados
         """
         try:
             log_info(f"Executando query: {query}")
-            log_info(f"Parâmetros: {params}")
+            log_info(f"Parameters: {params}")
             
             result = self.db.execute(text(query), params)
             candidates_raw = result.fetchall()
@@ -62,8 +62,7 @@ class CandidateRepository:
                 MatchProspect, 
                 ProcessedApplicant.id == MatchProspect.applicant_id
             ).filter(
-                MatchProspect.workbook_id == workbook_id,
-                MatchProspect.is_active == True
+                MatchProspect.workbook_id == workbook_id
             )
             
             results = query.all()
@@ -84,40 +83,37 @@ class CandidateRepository:
                     'score_semantico': result.score_semantico
                 })
             
-            log_info(f"Encontrados {len(candidates)} candidatos ativos no workbook")
+            log_info(f"Found {len(candidates)} candidatos ativos no workbook")
             return candidates
             
         except Exception as e:
             log_error(f"Erro ao buscar candidatos do workbook: {str(e)}")
             return []
     
-    def save_match_prospects(self, workbook_id: str, candidates: List[Dict], mode: str = 'incremental'):
+    def save_match_prospects(self, workbook_id: str, candidates: List[Dict], mode: str = 'incrinental'):
         """
         Salva candidatos como match_prospects
         
         Args:
             workbook_id: ID do workbook
             candidates: Lista de candidatos
-            mode: 'incremental' ou 'reset'
+            mode: 'incrinental' ou 'reset'
         """
         try:
             from app.models.match_prospect import MatchProspect
             
             if mode == 'reset':
-                # Remove todos os match_prospects existentes
+                # Remove all existing match_prospects
                 self.db.query(MatchProspect).filter(
                     MatchProspect.workbook_id == workbook_id
                 ).delete()
-                log_info(f"Removidos match_prospects existentes (modo reset)")
+                log_info(f"Rinovidos match_prospects existentes (modo reset)")
             else:
-                # Modo incremental: desativa os atuais
+                # Modo incrinental: rinove os existentes também (simplificado)
                 self.db.query(MatchProspect).filter(
                     MatchProspect.workbook_id == workbook_id
-                ).update({"is_active": False})
-                log_info(f"Desativados match_prospects existentes (modo incremental)")
-            
-            # Determina o próximo step
-            filter_step = self._get_next_filter_step(workbook_id)
+                ).delete()
+                log_info(f"Rinovidos match_prospects existentes (modo incrinental)")
             
             # Adiciona novos match_prospects
             for candidate in candidates:
@@ -125,15 +121,13 @@ class CandidateRepository:
                     workbook_id=workbook_id,
                     applicant_id=candidate['id'],
                     score_semantico=candidate.get('score_semantico', 0.5),
-                    origem=candidate.get('origem', 'sql_query'),
-                    selecionado=False,
-                    filter_step_added=filter_step,
-                    is_active=True
+                    origem=candidate.get('origin', 'sql_query'),
+                    selecionado=False
                 )
                 self.db.add(match_prospect)
             
             self.db.commit()
-            log_info(f"Salvos {len(candidates)} match_prospects (step {filter_step})")
+            log_info(f"Saved {len(candidates)} match_prospects")
             
         except Exception as e:
             log_error(f"Erro ao salvar match_prospects: {str(e)}")
@@ -158,7 +152,7 @@ class CandidateRepository:
             return {
                 'id': vaga.id,
                 'titulo': vaga.informacoes_basicas_titulo_vaga,
-                'texto_semantico': vaga.vaga_texto_semantico,
+                                'texto_semantico': vaga.vaga_texto_semantico,
                 'embedding_vector': vaga.vaga_embedding_vector,
                 'principais_atividades': vaga.perfil_vaga_principais_atividades,
                 'competencias': vaga.perfil_vaga_competencia_tecnicas_e_comportamentais,
@@ -189,7 +183,7 @@ class CandidateRepository:
                     'cv_pt': cv_data,
                     'score_semantico': float(1 - candidate.distancia),
                     'distancia': float(candidate.distancia),
-                    'origem': 'sql_query_semantic'
+                    'origin': 'sql_query_sinantic'
                 }
                 candidates.append(candidate_dict)
                 

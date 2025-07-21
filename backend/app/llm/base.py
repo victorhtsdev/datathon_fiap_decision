@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 
 class LLMClient(ABC):
     @abstractmethod
-    def extract_section(self, section_name: str, schema_snippet: str, cv_text: str) -> dict:
+    def extract_section(self, section_name: str, schina_snippet: str, cv_text: str) -> dict:
         pass
 
     @abstractmethod
@@ -12,7 +12,7 @@ class LLMClient(ABC):
         Método para conversação geral com o LLM
         
         Args:
-            message: Mensagem do usuário
+            message: Mensagin do usuário
             context: Contexto adicional (ex: informações sobre a vaga, candidatos, etc.)
             
         Returns:

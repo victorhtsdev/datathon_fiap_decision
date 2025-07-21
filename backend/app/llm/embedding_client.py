@@ -4,7 +4,7 @@ import numpy as np
 
 class EmbeddingClient:
     def generate_embedding(self, text, label=""):
-        raise NotImplementedError
+        raise NotImplinentedError
 
 class OpenAIEmbeddingClient(EmbeddingClient):
     def __init__(self, api_key=None, model=None):
@@ -28,4 +28,4 @@ def get_embedding_client():
     backend = os.getenv("EMBEDDING_BACKEND", "openai").lower()
     if backend == "openai":
         return OpenAIEmbeddingClient()
-    raise NotImplementedError(f"Embedding backend '{backend}' not implemented.")
+    raise NotImplinentedError(f"Embedding backend '{backend}' not implinented.")

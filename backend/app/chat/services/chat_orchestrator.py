@@ -5,9 +5,8 @@ from app.chat.models.chat_session import ChatSession, ChatContext
 from app.chat.services.intent_classifier import IntentClassifier, ChatIntent
 from app.chat.handlers.vaga_handler import VagaQuestionHandler
 from app.chat.handlers.candidate_handler import CandidateQuestionHandler
-from app.chat.handlers.filter_handler import FilterHandler
 from app.chat.handlers.generic_handler import GenericConversationHandler
-from app.chat.handlers.candidate_semantic_filter_handler import CandidateSemanticFilterHandler
+from app.chat.services.semantic_candidate_service import SemanticCandidateService
 from app.core.logging import log_info, log_error
 
 
@@ -43,11 +42,10 @@ class ChatOrchestrator:
         # Inicializa handlers
         self.vaga_handler = VagaQuestionHandler(db)
         self.candidate_handler = CandidateQuestionHandler(db)
-        self.filter_handler = FilterHandler(db)
-        self.semantic_filter_handler = CandidateSemanticFilterHandler(db)  # Novo handler semântico
+        self.semantic_service = SemanticCandidateService(db)  # Service direto
         self.generic_handler = GenericConversationHandler()
         
-        # Cache de sessões ativas (em produção, usar Redis ou similar)
+        # Cache de sessões ativas (in produção, usar Redis ou similar)
         self._active_sessions: Dict[str, ChatSession] = {}
         
         self._initialized = True
@@ -113,7 +111,7 @@ class ChatOrchestrator:
         except Exception as e:
             log_error(f"Error processing message: {str(e)}")
             return {
-                'response': "Desculpe, ocorreu um erro interno. Tente novamente em alguns instantes.",
+                'response': "Desculpe, ocorreu um erro interno. Tente novamente in alguns instantes.",
                 'session_id': session_id or "unknown",
                 'filtered_candidates': None,
                 'total_candidates': None,
@@ -123,7 +121,7 @@ class ChatOrchestrator:
     
     def _get_or_create_session(self, session_id: Optional[str], workbook_id: Optional[str]) -> ChatSession:
         """Obtém sessão existente ou cria nova"""
-        log_info(f"Session management - session_id: {session_id}, existing sessions: {list(self._active_sessions.keys())}")
+        log_info(f"Session managinent - session_id: {session_id}, existing sessions: {list(self._active_sessions.keys())}")
         
         if session_id and session_id in self._active_sessions:
             session = self._active_sessions[session_id]
@@ -151,17 +149,41 @@ class ChatOrchestrator:
         elif intent_result.intent == ChatIntent.CANDIDATE_QUESTION:
             return self.candidate_handler.handle(intent_result.parameters, session)
         
-        elif intent_result.intent == ChatIntent.CANDIDATE_FILTER:
-            return await self.filter_handler.handle_filter(intent_result.parameters, session)
-        
         elif intent_result.intent == ChatIntent.SEMANTIC_CANDIDATE_FILTER:
-            return self.semantic_filter_handler.handle(intent_result.parameters, session)
+            # Chama service diretamente sin handler
+            workbook_id = intent_result.parameters.get('workbook_id') or session.context.workbook_id
+            user_input = intent_result.parameters.get('filter_criteria') or intent_result.parameters.get('message')
+            
+            service_response = self.semantic_service.filter_candidates_complete(workbook_id, user_input)
+            
+            # CONVERTE para formato esperado pelo front-end
+            candidates = service_response.get('data', {}).get('candidates', [])
+            total = service_response.get('data', {}).get('total', 0)
+            
+            return {
+                "response": service_response.get('response', 'Busca concluída.'),
+                "filtered_candidates": candidates,  # Front-end espera este campo
+                "total_candidates": total,          # Front-end espera este campo
+                "intent": service_response.get('intent', 'filter_candidates')
+            }
         
         elif intent_result.intent == ChatIntent.FILTER_RESET:
-            return self.filter_handler.handle_reset(intent_result.parameters, session)
+            # SEM MEMÓRIA: Reset não faz nada
+            return {
+                "response": "Não há filtros para limpar (sin minória).", 
+                "filtered_candidates": [],
+                "total_candidates": 0,
+                "intent": "filter_reset"
+            }
         
         elif intent_result.intent == ChatIntent.FILTER_HISTORY:
-            return self.filter_handler.handle_history(intent_result.parameters, session)
+            # SEM MEMÓRIA: Histórico não existe
+            return {
+                "response": "Não há histórico (sin minória). Cada busca é independente.", 
+                "filtered_candidates": [],
+                "total_candidates": 0,
+                "intent": "filter_history"
+            }
         
         elif intent_result.intent == ChatIntent.GENERIC_CONVERSATION:
             return self.generic_handler.handle(intent_result.parameters, session)
@@ -170,13 +192,13 @@ class ChatOrchestrator:
             # Fallback para intent desconhecida
             return {
                 'response': self._generate_help_message(),
-                'filtered_candidates': None,
-                'total_candidates': None
+                'filtered_candidates': [],
+                'total_candidates': 0
             }
     
     def _generate_help_message(self) -> str:
         """Gera mensagem de ajuda quando a intenção não é reconhecida"""
-        return """Não entendi bem sua solicitação.
+        return """Não entendi bin sua solicitação.
 
 Como assistente de **recrutamento**, posso ajudá-lo com:
 
@@ -199,7 +221,7 @@ Tente uma dessas opções! 🚀"""
         return self._active_sessions.get(session_id)
     
     def clear_session(self, session_id: str) -> bool:
-        """Remove uma sessão do cache"""
+        """Rinove uma sessão do cache"""
         if session_id in self._active_sessions:
             del self._active_sessions[session_id]
             return True

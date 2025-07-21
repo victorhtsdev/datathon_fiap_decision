@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { Plus, FileText, Calendar, User, Settings, Activity, ArrowRight } from 'lucide-react';
+import { Plus, FileText, Calendar, User, Settings, Activity, ArrowRight, Search, Filter } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { apiService } from '../services/api';
 import type { Workbook } from '../types/api';
 
@@ -9,6 +10,9 @@ interface WorkbookListProps {
 }
 
 export function WorkbookList({ onCreateNew, onWorkbookSelect }: WorkbookListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterVagaId, setFilterVagaId] = useState('');
+
   const {
     data: workbooks = [],
     isLoading,
@@ -16,7 +20,40 @@ export function WorkbookList({ onCreateNew, onWorkbookSelect }: WorkbookListProp
   } = useQuery({
     queryKey: ['workbooks'],
     queryFn: () => apiService.getWorkbooks(),
+    staleTime: 2 * 60 * 1000, // 2 minutos 
+    refetchOnWindowFocus: true, // Recarrega quando volta para a aba
+    refetchOnMount: true, // Recarrega quando componente monta
   });
+
+  // Filtrar e ordenar workbooks
+  const filteredAndSortedWorkbooks = useMemo(() => {
+    let filtered = workbooks;
+
+    // Aplicar filtros
+    if (searchTerm || filterVagaId) {
+      filtered = workbooks.filter((workbook) => {
+        const matchesSearch = searchTerm === '' || 
+          (workbook.vaga_titulo && workbook.vaga_titulo.toLowerCase().includes(searchTerm.toLowerCase()));
+        
+        const matchesVagaId = filterVagaId === '' || 
+          workbook.vaga_id.toString().includes(filterVagaId);
+        
+        return matchesSearch && matchesVagaId;
+      });
+    }
+
+    // Ordenar por status (abertos primeiro) e depois por timestamp decrescente
+    return filtered.sort((a, b) => {
+      // Primeiro, priorizar workbooks abertos
+      if (a.status === 'aberto' && b.status !== 'aberto') return -1;
+      if (a.status !== 'aberto' && b.status === 'aberto') return 1;
+      
+      // Dentro do mesmo status, ordenar por data decrescente (mais recentes primeiro)
+      const dateA = new Date(a.criado_em || '').getTime();
+      const dateB = new Date(b.criado_em || '').getTime();
+      return dateB - dateA; // Ordem decrescente
+    });
+  }, [workbooks, searchTerm, filterVagaId]);
 
   if (isLoading) {
     return (
@@ -89,12 +126,6 @@ export function WorkbookList({ onCreateNew, onWorkbookSelect }: WorkbookListProp
               </div>
               <p className="text-sm text-gray-600">Matching inteligente</p>
             </div>
-            <div className="text-center p-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <FileText className="w-6 h-6 text-orange-600" />
-              </div>
-              <p className="text-sm text-gray-600">Relatórios detalhados</p>
-            </div>
           </div>
         </div>
       </div>
@@ -109,12 +140,79 @@ export function WorkbookList({ onCreateNew, onWorkbookSelect }: WorkbookListProp
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Seus Workbooks</h2>
           <p className="text-gray-600">
-            {workbooks.length} workbook{workbooks.length !== 1 ? 's' : ''} criado{workbooks.length !== 1 ? 's' : ''}
+            {filteredAndSortedWorkbooks.length} de {workbooks.length} workbook{workbooks.length !== 1 ? 's' : ''} 
+            {filteredAndSortedWorkbooks.length !== workbooks.length ? ' (filtrado' + (filteredAndSortedWorkbooks.length !== 1 ? 's' : '') + ')' : ''}
           </p>
         </div>
 
+        {/* Filtros */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="w-5 h-5 text-gray-500" />
+            <h3 className="font-semibold text-gray-900">Filtros</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+                Buscar por nome da vaga
+              </label>
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <input
+                  type="text"
+                  id="search"
+                  placeholder="Digite o nome da vaga..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label htmlFor="vagaId" className="block text-sm font-medium text-gray-700 mb-2">
+                Filtrar por ID da vaga
+              </label>
+              <input
+                type="text"
+                id="vagaId"
+                placeholder="Digite o ID da vaga..."
+                value={filterVagaId}
+                onChange={(e) => setFilterVagaId(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+            </div>
+          </div>
+          
+          {(searchTerm || filterVagaId) && (
+            <div className="mt-4 flex items-center gap-2">
+              <span className="text-sm text-gray-600">Filtros ativos:</span>
+              {searchTerm && (
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                  Nome: "{searchTerm}"
+                </span>
+              )}
+              {filterVagaId && (
+                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                  ID: {filterVagaId}
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterVagaId('');
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700 underline ml-2"
+              >
+                Limpar filtros
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="grid gap-6">
-          {workbooks.map((workbook) => (
+          {filteredAndSortedWorkbooks.map((workbook) => (
             <div
               key={workbook.id}
               className="bg-white rounded-2xl border border-gray-200 p-8 hover:shadow-lg transition-all duration-300 hover:border-blue-200 group"
@@ -122,12 +220,18 @@ export function WorkbookList({ onCreateNew, onWorkbookSelect }: WorkbookListProp
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+                    <div className={`w-4 h-4 rounded-full ${
+                      workbook.status === 'fechado' ? 'bg-gray-400' : 'bg-green-500 animate-pulse'
+                    }`}></div>
                     <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                       Workbook #{workbook.id.toString().slice(0, 8)}
                     </h3>
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                      Ativo
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      workbook.status === 'fechado' 
+                        ? 'bg-gray-100 text-gray-700' 
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {workbook.status === 'fechado' ? 'Encerrado' : 'Ativo'}
                     </span>
                   </div>
                   
@@ -182,6 +286,28 @@ export function WorkbookList({ onCreateNew, onWorkbookSelect }: WorkbookListProp
               </div>
             </div>
           ))}
+          
+          {/* Mensagem quando não há resultados após filtrar */}
+          {filteredAndSortedWorkbooks.length === 0 && workbooks.length > 0 && (searchTerm || filterVagaId) && (
+            <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum workbook encontrado</h3>
+              <p className="text-gray-600 mb-4">
+                Não encontramos workbooks que correspondam aos filtros aplicados.
+              </p>
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterVagaId('');
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+              >
+                Limpar filtros
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -204,17 +330,6 @@ export function WorkbookList({ onCreateNew, onWorkbookSelect }: WorkbookListProp
                 <div className="text-left">
                   <div className="font-semibold">Novo Workbook</div>
                   <div className="text-xs text-blue-100">Analisar candidatos</div>
-                </div>
-              </button>
-              
-              <button 
-                disabled
-                className="w-full bg-gray-100 text-gray-400 p-4 rounded-xl font-medium cursor-not-allowed flex items-center gap-3"
-              >
-                <FileText className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-semibold">Relatórios</div>
-                  <div className="text-xs">Em breve</div>
                 </div>
               </button>
             </div>

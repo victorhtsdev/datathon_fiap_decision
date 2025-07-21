@@ -6,7 +6,7 @@ from app.core.logging import log_info, log_error
 
 
 class GenericConversationHandler(BaseChatHandler):
-    """Handler para conversações genéricas (saudações, agradecimentos, etc.)"""
+    """Handler for generic conversations (greetings, thanks, etc.)"""
     
     def __init__(self, db=None):
         super().__init__(db)
@@ -14,7 +14,7 @@ class GenericConversationHandler(BaseChatHandler):
     
     def handle(self, parameters: Dict[str, Any], session: ChatSession) -> Dict[str, Any]:
         """
-        Lida com conversas genéricas como saudações
+        Handles generic conversations like greetings
         """
         try:
             log_info(f"GenericHandler.handle called with parameters: {parameters}")
@@ -22,7 +22,7 @@ class GenericConversationHandler(BaseChatHandler):
             message = parameters.get('message', '').lower().strip()
             log_info(f"Processing generic message: '{message}'")
             
-            # Remove pontuação para análise
+            # Remove punctuation for analysis
             clean_message = message.strip('.,!?;:')
             
             greetings = ['olá', 'ola', 'oi', 'hey', 'hello', 'hi', 'bom dia', 'boa tarde', 'boa noite']
@@ -49,10 +49,10 @@ class GenericConversationHandler(BaseChatHandler):
             return self._create_response("Olá! Como posso ajudá-lo hoje?")
     
     def _get_greeting_response(self) -> str:
-        """Resposta para saudações"""
+        """Response for greetings"""
         return """Olá!
 
-Sou seu assistente especializado em **recrutamento e seleção**. Estou aqui para ajudá-lo a encontrar os melhores candidatos para esta vaga!
+Sou seu assistente especializado in **recrutamento e seleção**. Estou aqui para ajudá-lo a encontrar os melhores candidatos para esta vaga!
 
 Posso ajudá-lo a:
 - **Filtrar candidatos** - Ex: "filtre 5 candidatos com Java", "busque pessoas de São Paulo"
@@ -63,28 +63,28 @@ Posso ajudá-lo a:
 Como posso ajudá-lo hoje?"""
     
     def _get_thanks_response(self) -> str:
-        """Resposta para agradecimentos"""
+        """Response for thanks"""
         return """De nada! 😊 
 
 Estou aqui para tornar seu processo de recrutamento mais eficiente. Se precisar filtrar mais candidatos ou analisar perfis específicos, é só me avisar!
 
 Posso ajudar com:
-• Filtros adicionais ou refinamento de busca
+• Filters adicionais ou refinamento de busca
 • Análise detalhada de candidatos específicos
 • Informações sobre requisitos da vaga
 • Histórico e gerenciamento de filtros aplicados"""
     
     def _get_confirmation_response(self) -> str:
-        """Resposta para confirmações"""
+        """Response for confirmations"""
         return "Perfeito! Se precisar de ajuda com candidatos ou informações sobre a vaga, estarei aqui. 👍"
     
     def _get_farewell_response(self) -> str:
-        """Resposta para despedidas"""
+        """Response for farewells"""
         return "Até mais! Foi um prazer ajudar com o processo de recrutamento."
     
     def _get_help_response(self) -> str:
-        """Resposta de ajuda quando não entende a mensagem"""
-        return """Não entendi bem sua solicitação.
+        """Help response when message is not understood"""
+        return """Não entendi bin sua solicitação.
 
 Como assistente de **recrutamento**, posso ajudá-lo com:
 
