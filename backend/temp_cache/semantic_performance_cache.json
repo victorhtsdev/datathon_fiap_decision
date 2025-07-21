@@ -1,48 +1,48 @@
 {
-  "generated_at": "2025-07-21T15:01:49.120090",
+  "generated_at": "2025-07-21T16:32:52.855087",
   "data": {
     "metricas_gerais": {
-      "total_aprovados": 419,
-      "media_posicao": 3.31,
+      "total_aprovados": 422,
+      "media_posicao": 3.3,
       "mediana_posicao": 2.0,
-      "desvio_padrao": 3.56,
-      "vagas_analisadas": 326,
-      "vagas_com_ranking_semantico": 326
+      "desvio_padrao": 3.55,
+      "vagas_analisadas": 328,
+      "vagas_com_ranking_semantico": 328
     },
     "distribuicao_top_positions": {
       "top_1": {
-        "quantidade": 135,
+        "quantidade": 136,
         "percentual": 32.2
       },
       "top_3": {
-        "quantidade": 305,
-        "percentual": 72.8
+        "quantidade": 308,
+        "percentual": 73.0
       },
       "top_5": {
-        "quantidade": 359,
-        "percentual": 85.7
+        "quantidade": 362,
+        "percentual": 85.8
       },
       "top_10": {
-        "quantidade": 394,
-        "percentual": 94.0
+        "quantidade": 397,
+        "percentual": 94.1
       },
       "top_20": {
-        "quantidade": 416,
+        "quantidade": 419,
         "percentual": 99.3
       }
     },
     "histogram_data": [
       {
         "posicao": 1,
-        "quantidade": 135
+        "quantidade": 136
       },
       {
         "posicao": 2,
-        "quantidade": 119
+        "quantidade": 120
       },
       {
         "posicao": 3,
-        "quantidade": 51
+        "quantidade": 52
       },
       {
         "posicao": 4,
@@ -116,7 +116,7 @@
     "status_distribution": [
       {
         "status": "Contratado pela Decision",
-        "quantidade": 322
+        "quantidade": 325
       },
       {
         "status": "Contratado como Hunting",
@@ -146,12 +146,12 @@
       "range_tipico": "0.0 (idêntico) a 2.0 (opostos)",
       "ordenacao": "ASC (menores distâncias primeiro)"
     },
-    "mensagem_interpretacao": "## 📊 Interpretação dos Resultados\n\n### 📈 Visão Geral\n- **419 candidatos aprovados** analisados na base de dados\n- **Performance da busca semântica** para identificar os melhores candidatos\n\n### 🎯 Métricas de Precisão\n- **Posição média dos aprovados:** 3.3º lugar\n- **Metade dos aprovados aparece até a 2ª posição**\n- **32% dos aprovados** foram os mais recomendados semanticamente\n- **94% dos aprovados** aparecem entre os 10 primeiros\n\n### 🔍 Análise Detalhada\n| Top N | Quantidade | Percentual | Interpretação |\n|-------|------------|------------|---------------|\n| **Top 1** | 135 | **32.2%** | Candidatos que foram a primeira recomendação |\n| **Top 3** | 305 | **72.8%** | Candidatos entre os 3 primeiros |\n| **Top 5** | 359 | **85.7%** | Candidatos entre os 5 primeiros |\n| **Top 10** | 394 | **94.0%** | Candidatos entre os 10 primeiros |\n\n� **Conclusão:** A busca semântica demonstra alta precisão, com média de posição 3.3 para candidatos aprovados.",
+    "mensagem_interpretacao": "## 📊 Interpretação dos Resultados\n\n### 📈 Visão Geral\n- **422 candidatos aprovados** analisados na base de dados\n- **Performance da busca semântica** para identificar os melhores candidatos\n\n### 🎯 Métricas de Precisão\n- **Posição média dos aprovados:** 3.3º lugar\n- **Metade dos aprovados aparece até a 2ª posição**\n- **32% dos aprovados** foram os mais recomendados semanticamente\n- **94% dos aprovados** aparecem entre os 10 primeiros\n\n### 🔍 Análise Detalhada\n| Top N | Quantidade | Percentual | Interpretação |\n|-------|------------|------------|---------------|\n| **Top 1** | 136 | **32.2%** | Candidatos que foram a primeira recomendação |\n| **Top 3** | 308 | **73.0%** | Candidatos entre os 3 primeiros |\n| **Top 5** | 362 | **85.8%** | Candidatos entre os 5 primeiros |\n| **Top 10** | 397 | **94.1%** | Candidatos entre os 10 primeiros |\n\n� **Conclusão:** A busca semântica demonstra alta precisão, com média de posição 3.3 para candidatos aprovados.",
     "interpretacao_estruturada": {
       "titulo": "Interpretação dos Resultados",
       "visao_geral": {
         "total_candidatos": {
-          "valor": 419,
+          "valor": 422,
           "descricao": "candidatos aprovados analisados na base de dados"
         },
         "objetivo": "Performance da busca semântica para identificar os melhores candidatos"
@@ -181,29 +181,29 @@
       "analise_detalhada": [
         {
           "categoria": "Top 1",
-          "quantidade": 135,
+          "quantidade": 136,
           "percentual": 32.2,
           "interpretacao": "Candidatos que foram a primeira recomendação",
           "cor": "#10B981"
         },
         {
           "categoria": "Top 3",
-          "quantidade": 305,
-          "percentual": 72.8,
+          "quantidade": 308,
+          "percentual": 73.0,
           "interpretacao": "Candidatos entre os 3 primeiros",
           "cor": "#3B82F6"
         },
         {
           "categoria": "Top 5",
-          "quantidade": 359,
-          "percentual": 85.7,
+          "quantidade": 362,
+          "percentual": 85.8,
           "interpretacao": "Candidatos entre os 5 primeiros",
           "cor": "#8B5CF6"
         },
         {
           "categoria": "Top 10",
-          "quantidade": 394,
-          "percentual": 94.0,
+          "quantidade": 397,
+          "percentual": 94.1,
           "interpretacao": "Candidatos entre os 10 primeiros",
           "cor": "#F59E0B"
         }
@@ -215,6 +215,6 @@
         "recomendacao": "Excelente performance! O algoritmo está funcionando muito bem para identificar candidatos qualificados."
       }
     },
-    "generated_at": "2025-07-21T15:01:49.117356"
+    "generated_at": "2025-07-21T16:32:52.855087"
   }
 }

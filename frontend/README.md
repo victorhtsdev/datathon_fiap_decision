@@ -1,132 +1,74 @@
-## Licença
+# Datathon Decision – Frontend
 
-Este projeto está licenciado sob a Licença MIT. Veja o arquivo LICENSE para mais detalhes.
-## Variáveis de Ambiente
+O frontend do **Datathon Decision** é uma aplicação web desenvolvida em React, com Vite para build e desenvolvimento rápido e Tailwind CSS para estilização moderna e responsiva. Seu objetivo principal é prover uma interface intuitiva para interação com o backend, permitindo visualizar, filtrar e analisar candidatos e vagas, além de oferecer chat integrado com LLM para análise semântica.
 
-Para integração correta com o backend, configure as variáveis de ambiente no arquivo `.env` do backend, usando valores genéricos como exemplo:
+---
 
-```env
-LLM_BACKEND=ollama
-OLLAMA_MODEL=seu_modelo_aqui
-DEEPSEEK_API_KEY=sk-sua-chave-aqui
-DATABASE_URL=postgresql://usuario:senha@localhost:5432/seu_banco
-CHUNK_SIZE=5000
-DEBUG=True
-SAVE_LOGS=false
-APP_LOG_ENABLED=true
-APP_LOG_LEVEL=INFO
-APP_LOG_FILE=app.log
-LLM_LOG=True
-OPENAI_API_KEY="sk-sua-chave-openai-aqui"
+## 🛠 Tecnologias Utilizadas
+
+- **React 18+**
+- **Vite**
+- **TypeScript**
+- **Tailwind CSS**
+- **Axios** (requisições HTTP)
+- **ESLint** (linting)
+- **Docker** (opcional para deploy)
+
+---
+
+## 📁 Estrutura de Pastas
+
+```
+├── public/                # Recursos estáticos
+└── src/
+    ├── components/        # Componentes React reutilizáveis
+    ├── services/          # Integração com APIs do backend
+    ├── hooks/             # Hooks customizados
+    ├── types/             # Tipos TypeScript
+    ├── App.tsx            # Componente raiz
+    ├── main.tsx           # Ponto de entrada
+    └── index.css          # Estilos globais
 ```
 
-Certifique-se de ajustar as chaves e URLs conforme seu ambiente, nunca expondo dados sensíveis em arquivos públicos.
-# Frontend - Datathon Decision
+---
 
-Este frontend foi desenvolvido em React com Vite e Tailwind CSS, proporcionando uma interface moderna para interação com as APIs do backend.
+## ⚙️ Configuração de Ambiente
 
-## Funcionalidades
+Antes de iniciar o aplicativo, crie um arquivo `.env` na raiz do projeto e defina a variável de ambiente:
 
-- Visualização e filtragem de candidatos
-- Consulta e gerenciamento de vagas
-- Chat com LLM para análise semântica
-- Dashboard de performance
-
-## Instalação
-
-1. Instale as dependências:
-   ```bash
-   npm install
-   ```
-2. Execute o frontend:
-   ```bash
-   npm run dev
-   ```
-
-## Estrutura de Pastas
-- `src/components/`: Componentes React reutilizáveis
-- `src/services/`: Integração com APIs do backend
-- `src/hooks/`: Hooks customizados
-- `src/types/`: Tipos TypeScript
-- `public/`: Assets públicos
-
-## Exemplos de Uso
-- Para consultar candidatos:
-  ```js
-  import { getApplicants } from './services/api';
-  getApplicants().then(...);
-  ```
-- Para enviar mensagem ao chat:
-  ```js
-  import { sendChatMessage } from './services/chat';
-  sendChatMessage('Quais vagas estão abertas?').then(...);
-  ```
-
-## Dependências
-- React
-- Vite
-- Tailwind CSS
-- Axios
-- Outros (ver `package.json`)
-
-## Testes
-Execute os testes com:
-```bash
-npm test
+```ini
+VITE_API_BASE_URL=https://api.seu-dominio.com  # URL base do backend para onde o frontend fará requisições
 ```
 
-## Documentação
-Consulte o backend para detalhes dos endpoints disponíveis.
+---
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 🖼️ Telas da Aplicação
 
-Currently, two official plugins are available:
+A seguir, as principais telas da aplicação. Insira os prints de tela nos locais indicados.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 1. Página Inicial de Workbooks
 
-## Expanding the ESLint configuration
+Descrição: Visão geral dos seus workbooks de análise. Inclui filtros por nome e ID de vagas, ações rápidas (criar novo workbook) e estatísticas gerais.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Seleção de Vaga (Novo Workbook)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Descrição: Após clicar em **Novo Workbook**, selecione a vaga desejada usando o campo de busca. Cada cartão de vaga exibe título da vaga, ID e status.
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+
+
+### 3. Tela de Detalhes do Workbook e Chat Semântico
+
+Descrição: Na tela de detalhes do workbook, é possível iniciar a busca semântica via chat com IA, filtrar e selecionar candidatos com base em linguagem natural.
+
+
+
+### 4. Dashboard de Analytics
+
+Descrição: Página de **Analytics** para monitorar a solução. Os gráficos mostram métricas de performance semântica, como posição histórica dos candidatos contratados.
+
+
+
+---
+
