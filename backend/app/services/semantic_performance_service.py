@@ -24,11 +24,8 @@ class SemanticPerformanceService:
         self.cache_file = self.cache_dir / "semantic_performance_cache.json"
     
     def _is_cache_valid(self) -> bool:
-        """Verifica se o cache é válido (mesmo dia)"""
         if not self.cache_file.exists():
             return False
-        
-        # Lê a data do cache
         try:
             with open(self.cache_file, 'r', encoding='utf-8') as f:
                 cache_data = json.load(f)
@@ -39,7 +36,6 @@ class SemanticPerformanceService:
             return False
     
     def _save_cache(self, data: Dict[str, Any]) -> None:
-        """Salva dados no cache"""
         try:
             cache_data = {
                 'generated_at': datetime.now().isoformat(),
@@ -52,7 +48,6 @@ class SemanticPerformanceService:
             log_error(f"Erro ao salvar cache: {e}")
     
     def _load_cache(self) -> Optional[Dict[str, Any]]:
-        """Carrega dados do cache"""
         try:
             with open(self.cache_file, 'r', encoding='utf-8') as f:
                 cache_data = json.load(f)
@@ -62,177 +57,91 @@ class SemanticPerformanceService:
             return None
     
     def get_performance_analysis(self) -> Dict[str, Any]:
-        """
-        Retorna análise de performance da busca semântica.
-        Usa cache se disponível e válido, senão recalcula.
-        """
-        # Verifica cache primeiro
         if self._is_cache_valid():
             cached_data = self._load_cache()
             if cached_data:
                 log_info("Retornando dados do cache de performance")
                 return cached_data
         
-        # Recalcula os dados
         log_info("Recalculando dados de performance semântica")
         performance_data = self._calculate_performance_metrics()
-        
-        # Salva no cache
         self._save_cache(performance_data)
-        
         return performance_data
     
     def _calculate_performance_metrics(self) -> Dict[str, Any]:
-        """Calcula métricas de performance da busca semântica"""
         try:
-            # Status considerados como positivos (aprovados)
             status_positivos = (
-                'Contratado como Hunting', 'Contratado pela Decision',
-                'Documentação PJ', 'Aprovado', 'Proposta Aceita'
+                'Contratado como Hunting',
+                'Contratado pela Decision',
+                'Documentação PJ',
+                'Documentação CLT',
+                'Aprovado',
+                'Proposta Aceita',
+                'Encaminhar Proposta'
             )
-            
-            # 1. Buscar vagas com ao menos 1 candidato aprovado
             query_vagas = f"""
-            SELECT DISTINCT vaga_id 
-            FROM prospects 
+            SELECT DISTINCT vaga_id
+            FROM prospects
             WHERE situacao_candidado IN {status_positivos}
             """
-            
             vagas_result = self.db.execute(text(query_vagas)).fetchall()
             vaga_ids = [row[0] for row in vagas_result]
-            
             if not vaga_ids:
                 log_warning("Nenhuma vaga com candidatos aprovados encontrada")
                 return self._empty_response()
-            
             log_info(f"Analisando {len(vaga_ids)} vagas com candidatos aprovados")
-            
-            # 2. Para cada vaga, analisar ranking dos aprovados
             resultados = []
-            
             for vaga_id in vaga_ids:
-                vaga_results = self._analyze_vaga_performance(vaga_id, status_positivos)
-                resultados.extend(vaga_results)
-                if vaga_results:
-                    log_info(f"Vaga {vaga_id}: {len(vaga_results)} candidatos aprovados encontrados")
-            
-            log_info(f"Total de resultados coletados: {len(resultados)} candidatos aprovados")
-            
+                vagas = self._analyze_vaga_performance(vaga_id, status_positivos)
+                resultados.extend(vagas)
+                if vagas:
+                    log_info(f"Vaga {vaga_id}: {len(vagas)} candidatos aprovados encontrados")
             if not resultados:
                 log_warning("Nenhum resultado de análise encontrado")
                 return self._empty_response()
-            
-            # 3. Calcular métricas agregadas
             return self._calculate_aggregate_metrics(resultados)
-            
         except Exception as e:
             log_error(f"Erro ao calcular métricas de performance: {str(e)}")
             raise APIExceptions.internal_error("Erro ao calcular métricas de performance")
     
     def _analyze_vaga_performance(self, vaga_id: int, status_positivos: tuple) -> List[Dict]:
-        """
-        Analisa performance de uma vaga específica.
-        
-        Metodologia (conforme notebook de análise):
-        1. Verifica se há mais de um candidato COM embedding válido
-        2. Para cada vaga com candidatos aprovados, busca todos os candidatos 
-           com embeddings válidos que se candidataram à vaga
-        3. Ranqueia por similaridade semântica
-        4. Verifica quais desses candidatos foram aprovados
-        5. Registra a posição (rank) de cada aprovado no ranking semântico
-        
-        Isso mede se o algoritmo semântico consegue ranquear corretamente
-        os candidatos que se candidataram, colocando os aprovados nas primeiras posições.
-        """
         try:
-            # Verificar se há mais de um candidato COM embedding (em processed_applicants)
             query_verificacao = """
-            SELECT COUNT(*) 
+            SELECT COUNT(*)
             FROM prospects p
             JOIN processed_applicants pa ON pa.id = p.codigo::bigint
             WHERE p.vaga_id = :vaga_id
               AND pa.cv_embedding_vector IS NOT NULL
             """
-            
-            qtd_validos_result = self.db.execute(
-                text(query_verificacao), 
-                {"vaga_id": vaga_id}
-            ).fetchone()
-            
-            qtd_validos = qtd_validos_result[0] if qtd_validos_result else 0
-            
+            qtd_validos = self.db.execute(text(query_verificacao), {"vaga_id": vaga_id}).scalar() or 0
             if qtd_validos < 2:
-                return []  # pula essa vaga se tem menos de 2 candidatos válidos
-        
-            # Consulta dos candidatos válidos para análise semântica
-            query_candidatos = """
-            SELECT 
-                pa.id,
-                pa.nome,
-                pa.cv_embedding_vector <=> v.vaga_embedding_vector AS distancia
-            FROM 
-                processed_applicants pa
-            JOIN 
-                prospects p ON pa.id = p.codigo::bigint
-            JOIN 
-                vagas v ON v.id = p.vaga_id
-            WHERE 
-                v.id = :vaga_id
-                AND pa.cv_embedding_vector IS NOT NULL
-                AND v.vaga_embedding_vector IS NOT NULL
-            ORDER BY 
-                pa.cv_embedding_vector <=> v.vaga_embedding_vector ASC
-            """
-            
-            candidatos_result = self.db.execute(
-                text(query_candidatos), 
-                {"vaga_id": vaga_id}
-            ).fetchall()
-            
-            if not candidatos_result:
                 return []
-
-            # Adicionar rank (1-based)
-            candidatos_com_rank = []
-            for idx, row in enumerate(candidatos_result, 1):
-                candidatos_com_rank.append({
-                    'id': row[0],
-                    'nome': row[1],
-                    'distancia': float(row[2]),
-                    'rank': idx
-                })
-            
-            # Buscar status de TODOS os candidatos desta vaga
-            query_status = """
-            SELECT codigo::bigint AS id, situacao_candidado
-            FROM prospects
-            WHERE vaga_id = :vaga_id
+            query_candidatos = """
+            SELECT pa.id, pa.nome,
+                   pa.cv_embedding_vector <=> v.vaga_embedding_vector AS distancia
+            FROM processed_applicants pa
+            JOIN prospects p ON pa.id = p.codigo::bigint
+            JOIN vagas v ON v.id = p.vaga_id
+            WHERE v.id = :vaga_id
+              AND pa.cv_embedding_vector IS NOT NULL
+              AND v.vaga_embedding_vector IS NOT NULL
+            ORDER BY distancia ASC
             """
-            
-            status_result = self.db.execute(
-                text(query_status), 
-                {"vaga_id": vaga_id}
-            ).fetchall()
-            
-            # Criar mapping de status
-            status_map = {row[0]: row[1] for row in status_result}
-            
-            # Unir candidatos com status e filtrar apenas os aprovados
-            resultados = []
-            for candidato in candidatos_com_rank:
-                status = status_map.get(candidato['id'])
-                if status and status in status_positivos:
-                    resultados.append({
-                        "vaga_id": vaga_id,
-                        "candidato_id": candidato['id'],
-                        "candidato_nome": candidato['nome'],
-                        "rank": candidato['rank'],
-                        "distancia": candidato['distancia'],
-                        "status": status
-                    })
-            
-            return resultados
-            
+            candidatos = self.db.execute(text(query_candidatos), {"vaga_id": vaga_id}).fetchall()
+            if not candidatos:
+                return []
+            rankeds = [{'id': r[0], 'nome': r[1], 'distancia': float(r[2]), 'rank': i}
+                       for i, r in enumerate(candidatos, 1)]
+            status_rows = self.db.execute(text("""
+                SELECT codigo::bigint AS id, situacao_candidado
+                FROM prospects WHERE vaga_id = :vaga_id
+            """), {"vaga_id": vaga_id}).fetchall()
+            status_map = {r[0]: r[1] for r in status_rows}
+            return [
+                {'vaga_id': vaga_id, 'candidato_id': c['id'], 'candidato_nome': c['nome'],
+                 'rank': c['rank'], 'distancia': c['distancia'], 'status': status_map[c['id']]}
+                for c in rankeds if status_map.get(c['id']) in status_positivos
+            ]
         except Exception as e:
             log_error(f"Erro ao analisar vaga {vaga_id}: {str(e)}")
             return []

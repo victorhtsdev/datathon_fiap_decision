@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import applicant_router, vaga_router, workbook_router, processed_applicant_router, chat_router, prospects_match_router, workbook_filters_router, semantic_performance
+from app.routers import applicant_router, vaga_router, workbook_router, processed_applicant_router, chat_router, prospects_match_router, semantic_performance
 from app.llm.factory import get_llm_client
 
 # Load environment variables from .env file
@@ -39,7 +39,6 @@ app.include_router(workbook_router)
 app.include_router(processed_applicant_router)
 app.include_router(chat_router)
 app.include_router(prospects_match_router)
-app.include_router(workbook_filters_router)
 app.include_router(semantic_performance.router)
 
 
