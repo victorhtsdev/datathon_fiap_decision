@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-07-21T16:32:52.855087",
+  "generated_at": "2025-07-21T16:53:52.333136",
   "data": {
     "metricas_gerais": {
       "total_aprovados": 422,
@@ -215,6 +215,6 @@
         "recomendacao": "Excelente performance! O algoritmo está funcionando muito bem para identificar candidatos qualificados."
       }
     },
-    "generated_at": "2025-07-21T16:32:52.855087"
+    "generated_at": "2025-07-21T16:53:52.333136"
   }
 }
