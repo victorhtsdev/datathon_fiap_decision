@@ -2,6 +2,8 @@
 
 Projeto desenvolvido para o **Datathon FIAP**, focado em automação e inteligência na análise de currículos, gestão de vagas e recomendação de candidatos utilizando modelos de linguagem (LLMs) e análise semântica.
 
+![Dashboard de Analytics](./docs/chat.png)
+
 ---
 
 ## 🎯 Objetivo
