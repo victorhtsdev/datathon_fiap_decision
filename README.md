@@ -37,4 +37,4 @@ Este projeto está licenciado sob a Licença MIT. Veja o arquivo LICENSE para ma
 
 Para dúvidas ou sugestões, entre em contato pelo LinkedIn:
 
-[Victor H T Santana](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://www.linkedin.com/in/victor-hugo-teles-de-santana-359ba260/)
