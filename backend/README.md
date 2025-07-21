@@ -24,15 +24,15 @@ A aplicação expõe endpoints organizados por módulos. A seguir, lista dos pri
 
 ### 📁 workbook.py
 
-| Método | Endpoint                                  | Request Body     | Response Body             |
-| ------ | ----------------------------------------- | ---------------- | ------------------------- |
-| GET    | `/workbook`                               | —                | `WorkbookResponse[]`      |
-| POST   | `/workbook`                               | `WorkbookCreate` | `WorkbookResponse`        |
-| GET    | `/workbook/{workbook_id}`                 | —                | `WorkbookResponse`        |
-| PUT    | `/workbook/{workbook_id}`                 | `WorkbookUpdate` | `WorkbookResponse`        |
-| DELETE | `/workbook/{workbook_id}`                 | —                | — (HTTP 200)              |
-| POST   | `/workbook/{workbook_id}/match-prospects` | `object`         | — (HTTP 200)              |
-| GET    | `/workbook/{workbook_id}/match-prospects` | —                | `MatchProspectResponse[]` |
+| Método | Endpoint                                  | Descrição                               |
+| ------ | ----------------------------------------- | --------------------------------------- |
+| GET    | `/workbook`                               | Lista todos os workbooks                |
+| POST   | `/workbook`                               | Cria um novo workbook                   |
+| GET    | `/workbook/{workbook_id}`                 | Consulta um workbook específico         |
+| PUT    | `/workbook/{workbook_id}`                 | Atualiza um workbook existente          |
+| DELETE | `/workbook/{workbook_id}`                 | Remove um workbook                      |
+| POST   | `/workbook/{workbook_id}/match-prospects` | Atualiza match prospects de um workbook |
+| GET    | `/workbook/{workbook_id}/match-prospects` | Lista match prospects do workbook       |
 
 ### 📁 vaga.py
 
@@ -139,34 +139,60 @@ backend/
 
 ## 🛠️ Tecnologias
 
-- **Python 3.10+**
-- **FastAPI**
-- **SQLAlchemy**
-- **PostgreSQL + pgvector**
-- **Uvicorn**
-- **Alembic**
+- **Python 3.11+**
+- **FastAPI** (framework web)
+- **SQLAlchemy** (ORM)
+- **Pydantic** (validação de dados)
+- **Uvicorn** (ASGI server)
+- **PostgreSQL** (banco de dados relacional)
+- **Pandas e NumPy** (manipulação e análise de dados)
+- **Requests e HTTPX** (requisições HTTP síncronas e assíncronas)
+- **OpenAI, DeepSeek, Gemma 3, Ollama** (integração com LLMs)
+- **Docker** (containerização)
+- **Pytest** (testes automatizados)
+- **python-dotenv** (gerenciamento de variáveis de ambiente)
 
 ---
 
 ## 📑 Requisitos
 
-Antes de iniciar, instale as dependências:
+Pacotes necessários:
 
-```bash
-pip install \
-  fastapi[all] \
-  sqlalchemy \
-  psycopg2-binary \
-  python-dotenv \
-  pytest \
-  pydantic-settings \
-  openai \
-  pandas \
-  numpy \
-  requests
+```
+fastapi[all]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pytest
+pydantic-settings
+openai
+pandas
+numpy
+requests
+uvicorn
+ollama
 ```
 
 ---
+
+## 🔧 Variáveis de Ambiente
+
+Defina as seguintes variáveis no arquivo `.env` ou no ambiente, sem expor valores sensíveis:
+
+```
+LLM_BACKEND        # Backend de LLM (e.g., ollama, openai)
+OLLAMA_MODEL       # Modelo Ollama (e.g., gemma3:4b-it-qat)
+DEEPSEEK_API_KEY   # Chave de API DeepSeek
+DATABASE_URL       # URL de conexão com PostgreSQL
+CHUNK_SIZE         # Tamanho de chunk para processamento de texto
+DEBUG              # Modo debug (true/false)
+SAVE_LOGS          # Salvar logs em arquivo (true/false)
+APP_LOG_ENABLED    # Ativar registro de logs da aplicação (true/false)
+APP_LOG_LEVEL      # Nível de log (e.g., INFO, DEBUG)
+APP_LOG_FILE       # Caminho para o arquivo de log
+LLM_LOG            # Ativar logs do LLM (true/false)
+OPENAI_API_KEY     # Chave de API OpenAI
+```
 
 ## 📄 Licença
 

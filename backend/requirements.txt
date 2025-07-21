@@ -8,3 +8,5 @@ openai
 pandas
 numpy
 requests
+uvicorn
+ollama
