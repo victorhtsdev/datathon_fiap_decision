@@ -50,25 +50,25 @@ A seguir, as principais telas da aplicação. Insira os prints de tela nos locai
 
 Descrição: Visão geral dos seus workbooks de análise. Inclui filtros por nome e ID de vagas, ações rápidas (criar novo workbook) e estatísticas gerais.
 
-
+![Página Inicial de Workbooks](../docs/inicial.png)
 
 ### 2. Seleção de Vaga (Novo Workbook)
 
 Descrição: Após clicar em **Novo Workbook**, selecione a vaga desejada usando o campo de busca. Cada cartão de vaga exibe título da vaga, ID e status.
 
-
+![Seleção de Vaga](../docs/vagas.png)
 
 ### 3. Tela de Detalhes do Workbook e Chat Semântico
 
 Descrição: Na tela de detalhes do workbook, é possível iniciar a busca semântica via chat com IA, filtrar e selecionar candidatos com base em linguagem natural.
 
-
+![Tela de Detalhes e Chat Semântico](../docs/busca.png)
 
 ### 4. Dashboard de Analytics
 
 Descrição: Página de **Analytics** para monitorar a solução. Os gráficos mostram métricas de performance semântica, como posição histórica dos candidatos contratados.
 
-
+![Dashboard de Analytics](../docs/analytics.png)
 
 ---
 
