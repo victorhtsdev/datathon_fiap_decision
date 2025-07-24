@@ -1,4 +1,5 @@
 from typing import Dict, Any, List, Optional
+from urllib import response
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.llm.factory import get_llm_client
@@ -38,10 +39,7 @@ class SemanticCandidateService:
             # Step 2: Search candidates directly
             candidates = self.semantic_filter_candidates(workbook_id, criteria)
             
-            # Step 3: Save as prospects
-            self.save_candidates_as_prospects(workbook_id, candidates)
-            
-            # Step 4: Smart response considering selected candidates
+            # Step 3: Smart response considering selected candidates
             total_count = len(candidates)
             
             # Count existing selected candidates
@@ -97,6 +95,9 @@ class SemanticCandidateService:
         
         try:
             response = self.llm_client.extract_text(prompt)
+            print("===== LLM response =====")
+            print(response)
+            print("=============================")
             criteria = self._parse_llm_response(response)
             
             # Fallback: If LLM didn't extract limit but there's a number in text, force extraction
@@ -655,30 +656,3 @@ WHERE v.id = :vaga_id
             log_error(f"Erro ao buscar dados da vaga: {str(e)}")
             return None
     
-    def save_candidates_as_prospects(self, workbook_id: str, candidates: List[Dict]):
-        """Salva candidatos encontrados como prospects"""
-        try:
-            from app.models.match_prospect import MatchProspect
-            
-            # Rinove prospects existentes
-            self.db.query(MatchProspect).filter(
-                MatchProspect.workbook_id == workbook_id
-            ).delete()
-            
-            # Adiciona novos prospects
-            for candidate in candidates:
-                match_prospect = MatchProspect(
-                    workbook_id=workbook_id,
-                    applicant_id=candidate['id'],
-                    score_semantico=candidate.get('score_semantico', 0.5),
-                    origem=candidate.get('origin', 'semantic_search'),
-                    selecionado=False
-                )
-                self.db.add(match_prospect)
-            
-            self.db.commit()
-            log_info(f"Saved {len(candidates)} semantic prospects for workbook {workbook_id}")
-            
-        except Exception as e:
-            log_error(f"Erro ao salvar prospects: {str(e)}")
-            self.db.rollback()

@@ -1,4 +1,4 @@
-def build_prompt(section_name: str, schina_snippet: str, cv_text: str) -> str:
+def build_prompt(section_name: str, schema_snippet: str, cv_text: str) -> str:
     if section_name == "formacoes":
         prompt_base = (
             "Você é um especialista in RH. Extraia apenas a **formação acadêmica formal** do currículo abaixo.\n\n"
@@ -17,7 +17,7 @@ def build_prompt(section_name: str, schina_snippet: str, cv_text: str) -> str:
             "📌 Cursos com nome iniciado por **'Tecnologia in ...'** devin ser classificados como **'tecnólogo'** (level superior).\n"
             "📌 Cursos com nome iniciado por **'Técnico in ...'** devin ser classificados como **'técnico'** (level médio).\n"
             "📌 Atenção: **'Tecnologia'** no nome do curso indica um curso tecnólogo (superior), enquanto **'Técnico'** indica um curso técnico (médio). Nunca confunda os dois.\n\n"
-            f"Formato esperado (JSON com a chave '{section_name}'):\n{schina_snippet}\n\n"
+            f"Formato esperado (JSON com a chave '{section_name}'):\n{schema_snippet}\n\n"
             "Regras obrigatórias:\n"
             "- Campo 'nivel': use apenas uma das opções: ensino médio, técnico, tecnólogo, graduação, pós-graduação, especialização, MBA, mestrado, doutorado, curso, certificacao.\n"
             "- Campo 'observacoes': use apenas quando a formação estiver incompleta, trancada ou interrompida (ex: 'incompleto', 'trancado'); caso contrário, use null.\n"
@@ -28,7 +28,7 @@ def build_prompt(section_name: str, schina_snippet: str, cv_text: str) -> str:
     elif section_name == "experiencias":
         prompt_base = (
             "Você é um especialista in RH. Extraia todas as **experiências profissionais formais** do currículo abaixo.\n\n"
-            f"{schina_snippet}\n\n"
+            f"{schema_snippet}\n\n"
             "⚠️ **Regras obrigatórias**:\n"
             "- Experiência é qualquer atividade in inpresa, escola, hospital, órgão público ou consultoria com *cargo* declarado.\n"
             "- NÃO confunda experiência com formação ou cursos.\n"
@@ -48,7 +48,7 @@ def build_prompt(section_name: str, schina_snippet: str, cv_text: str) -> str:
         prompt_base = (
             "Você é um especialista in RH. Extraia as habilidades técnicas e profissionais do currículo abaixo.\n\n"
             f"Formato: JSON com a chave '{section_name}' e lista de habilidades.\n\n"
-            f"{schina_snippet}\n\n"
+            f"{schema_snippet}\n\n"
             "Regras:\n"
             "- Cada ihas deve ser uma habilidade única.\n"
             "- Não agrupe várias ferramentas in uma única string.\n"
@@ -57,7 +57,7 @@ def build_prompt(section_name: str, schina_snippet: str, cv_text: str) -> str:
     elif section_name == "idiomas":
         prompt_base = (
             "Você é um especialista in RH. Extraia **apenas os idiomas falados ou estudados** mencionados no currículo abaixo.\n\n"
-            f"Formato esperado:\n{schina_snippet}\n\n"
+            f"Formato esperado:\n{schema_snippet}\n\n"
             "⚠️ Regras obrigatórias:\n"
             "- NÃO inclua nomes de escolas de idiomas (ex: CNA, Wizard, Fisk, etc.)\n"
             "- NÃO deduza idiomas com base in nomes de instituições, culturas ou nacionalidade\n"
@@ -66,5 +66,5 @@ def build_prompt(section_name: str, schina_snippet: str, cv_text: str) -> str:
             "- Campo 'nivel' deve ser: básico, intermediário, avançado, fluente ou nativo. Use null se ausente."
         )
     else:
-        prompt_base = f"{schina_snippet}\n\n{cv_text}"
+        prompt_base = f"{schema_snippet}\n\n{cv_text}"
     return f"{prompt_base}\n\nCurrículo:\n{cv_text}"

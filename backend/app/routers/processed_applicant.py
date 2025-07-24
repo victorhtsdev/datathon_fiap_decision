@@ -58,7 +58,7 @@ def update_processed_applicant(
     
     # Update only the fields that are provided
     update_data = applicant_data.dict(exclude_unset=True)
-    for field, value in update_data.ihass():
+    for field, value in update_data.items():
         setattr(applicant, field, value)
     
     try:

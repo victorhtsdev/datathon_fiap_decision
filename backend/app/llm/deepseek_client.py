@@ -1,128 +1,82 @@
 import os
-import requests
+import re
 import json
+import requests
 from .base import LLMClient
 
 class DeepSeekClient(LLMClient):
     def __init__(self, api_key=None):
         self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
         self.base_url = "https://api.deepseek.com/v1"
+        self.console_log = os.getenv("LLM_CONSOLE_LOG", "false").lower() == "true"
 
-    def extract_section(self, section_name, schema_snippet, cv_text):
-        """
-        Extrai seção específica do CV usando DeepSeek API
-        """
+    def _clean_ansi_codes(self, text: str) -> str:
+        ansi = re.compile(r'(?:\x1B[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        cleaned = ansi.sub('', text)
+        return re.sub(r'\s+', ' ', cleaned).strip()
+
+    def _call_api(self, prompt: str, system_prompt: str = None, model: str = None) -> str:
+        payload = {
+            "model": model or "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": system_prompt or "Você é um especialista em extração de dados de CVs."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0
+        }
+        if self.console_log:
+            print(f"[DeepSeekClient] Calling API with prompt size {len(prompt)} chars")
+        resp = requests.post(
+            f"{self.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=90
+        )
+        if resp.status_code != 200:
+            raise ValueError(f"API error: {resp.status_code} - {resp.text}")
+        return resp.json()["choices"][0]["message"]["content"]
+
+    def extract_section(self, section_name, prompt_base):
         if not self.api_key:
             return {"error": "API key do DeepSeek não configurada."}
-        
-        prompt = f"""
-        Analise o seguinte CV e extraia informações da seção "{section_name}" seguindo o schema fornecido.
-        
-        Schema esperado:
-        {schema_snippet}
-        
-        CV:
-        {cv_text}
-        
-        Retorne um JSON válido com as informações extraídas da seção "{section_name}".
-        """
-        
         try:
-            response = requests.post(
-                f"{self.base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "deepseek-chat",
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "Você é um especialista em extração de dados de CVs. Sempre retorne respostas em formato JSON válido."
-                        },
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    "max_tokens": 1500,
-                    "temperature": 0.3
-                },
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                content = result["choices"][0]["message"]["content"].strip()
-                
-                # Tentar extrair JSON da resposta
-                import re
-                json_match = re.search(r'\{.*\}', content, re.DOTALL)
-                if json_match:
-                    try:
-                        return json.loads(json_match.group())
-                    except json.JSONDecodeError:
-                        return {"error": "Resposta não é um JSON válido", "content": content}
-                else:
-                    return {"error": "JSON não encontrado na resposta", "content": content}
-            else:
-                return {"error": f"Erro na API: {response.status_code} - {response.text}"}
-                
-        except requests.exceptions.Timeout:
-            return {"error": "Tempo limite excedido na chamada da API"}
+            content = self._call_api(prompt_base)
+            raw = re.search(r"\{.*\}", content, re.DOTALL)
+            if not raw:
+                raise ValueError("JSON não encontrado")
+            parsed = json.loads(raw.group())
         except Exception as e:
-            return {"error": f"Erro ao processar: {str(e)}"}
+            fix_prompt = (
+                f"{prompt_base}\n"
+                f"⚠️ Erro: {e}\n"
+                f"Resposta recebida:\n{content if 'content' in locals() else ''}\n"
+                f"Por favor, retorne somente o JSON válido com a chave '{section_name}'."
+            )
+            try:
+                content = self._call_api(fix_prompt)
+                raw = re.search(r"\{.*\}", content, re.DOTALL)
+                if not raw:
+                    raise ValueError("JSON não encontrado após fix")
+                parsed = json.loads(raw.group())
+            except Exception as e2:
+                return {"error": f"Falha após prompt_fix: {e2}"}
+        if isinstance(parsed, list):
+            parsed = {section_name: parsed}
+        return parsed
 
-    def chat(self, message: str, context: str = None) -> str:
-        """
-        Implementa conversação geral com DeepSeek API
-        """
+    def extract_text(self, prompt: str) -> str:
         if not self.api_key:
             return "Erro: API key do DeepSeek não configurada."
-        
-        # Monta as mensagens para a API
-        messages = []
-        
-        if context:
-            messages.append({
-                "role": "system",
-                "content": f"Você é um assistente especializado em recrutamento. Contexto: {context}"
-            })
-        else:
-            messages.append({
-                "role": "system", 
-                "content": "Você é um assistente especializado em recrutamento e análise de candidatos."
-            })
-            
-        messages.append({
-            "role": "user",
-            "content": message
-        })
+        content = self._call_api(prompt)
+        return self._clean_ansi_codes(content)
 
-        try:
-            response = requests.post(
-                f"{self.base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "deepseek-chat",
-                    "messages": messages,
-                    "max_tokens": 1000,
-                    "temperature": 0.7
-                },
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                return result["choices"][0]["message"]["content"].strip()
-            else:
-                return f"Erro na API: {response.status_code} - {response.text}"
-                
-        except requests.exceptions.Timeout:
-            return "Desculpe, o tempo limite foi excedido. Tente uma pergunta mais simples."
-        except Exception as e:
-            return f"Desculpe, ocorreu um erro ao processar sua mensagem: {str(e)}"
+    def chat(self, message: str, context: str = None) -> str:
+        if not self.api_key:
+            return "Erro: API key do DeepSeek não configurada."
+        sys_msg = context or "Você é um assistente de recrutamento especialista em JSON, precisa entender o contextoe  retornar o JSON VÁLIDO no schema solicitado. "
+        content = self._call_api(
+            message,
+            system_prompt=sys_msg,
+            model="deepseek-chat"
+        )
+        return self._clean_ansi_codes(content)
