@@ -138,6 +138,7 @@ coverage.xml
 Thumbs.db
 
 
-notebooks/
 tests/
 data/
+
+datathon-ec2.pem

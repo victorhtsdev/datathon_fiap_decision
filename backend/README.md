@@ -159,18 +159,18 @@ backend/
 Pacotes necessários:
 
 ```
-fastapi[all]
-sqlalchemy
-psycopg2-binary
-python-dotenv
-pytest
-pydantic-settings
-openai
-pandas
-numpy
-requests
-uvicorn
-ollama
+fastapi==0.115.14
+sqlalchemy==2.0.41
+psycopg2-binary==2.9.10
+python-dotenv==1.1.1
+pytest==8.4.1
+pydantic-settings==2.10.1
+openai==1.93.0
+pandas==2.2.3
+numpy==2.3.1
+requests==2.32.3
+uvicorn==0.35.0
+ollama==0.5.1
 ```
 
 ---
@@ -192,6 +192,7 @@ APP_LOG_LEVEL      # Nível de log (e.g., INFO, DEBUG)
 APP_LOG_FILE       # Caminho para o arquivo de log
 LLM_LOG            # Ativar logs do LLM (true/false)
 OPENAI_API_KEY     # Chave de API OpenAI
+OPENAI_MODEL       # Modelo Open AI 
 ```
 
 ## 📄 Licença

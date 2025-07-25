@@ -441,7 +441,10 @@ function VagaInfoHorizontal({ vagaId }: VagaInfoHorizontalProps) {
 
 export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false }: WorkbookDetailsProps) {
   const queryClient = useQueryClient();
-  
+
+  // Estado para modal de aviso de demonstração customizado
+  const [showDemoInfo, setShowDemoInfo] = useState(true);
+
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -737,6 +740,39 @@ export function WorkbookDetails({ workbook, onBack, onDelete, isDeleting = false
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {showDemoInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl border">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-7 h-7 text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Ambiente de Demonstração</h3>
+              </div>
+            </div>
+            <div className="text-gray-700 mb-6 space-y-3">
+              <p>
+                <strong>Importante:</strong> para facilitar os testes nesta demonstração, <span className="text-blue-700 font-medium">toda a base de currículos foi disponibilizada para todas as vagas</span>.
+              </p>
+              <p>
+                <span className="text-gray-800">No cenário real, apenas os candidatos que se candidataram a cada vaga (relacionados em <code>prospects</code>) apareceriam na lista. Aqui, todos os <code>applicants</code> podem ser buscados e avaliados para qualquer vaga.</span>
+              </p>
+              <p>
+                Essa configuração foi feita para permitir simulações com maior volume de currículos e facilitar a avaliação das funcionalidades.
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowDemoInfo(false)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium"
+              >
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

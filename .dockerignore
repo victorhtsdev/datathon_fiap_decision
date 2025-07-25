@@ -1,0 +1,28 @@
+# Python backend
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+
+# Node/Frontend
+node_modules/
+dist/
+build/
+.vite/
+*.log
+
+# VSCode/IDE
+.vscode/
+.idea/
+*.swp
+
+# Outros
+.DS_Store
+.git
+.gitignore
+
+# Dados e arquivos grandes
+backend/data/
