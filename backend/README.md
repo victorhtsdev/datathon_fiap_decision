@@ -13,7 +13,7 @@ O sistema automatiza etapas críticas do processo de recrutamento da empresa **D
 Principais funcionalidades:
 
 - **Normalização de Currículos e Vagas com LLMs**: Recebimento de dados brutos em texto livre e transformação em estruturas JSON padronizadas, extraindo informações como experiências, formações, habilidades e requisitos da vaga.
-- **Geração de Texto Semântico e Embeddings**: A partir do JSON padronizado, o sistema gera um texto descritivo semântico usado para criar embeddings vetoriais com modelos como OpenAI, DeepSeek e Ollama.
+- **Geração de Texto Semântico e Embeddings**: A partir do JSON padronizado, o sistema gera um texto descritivo semântico usado para criar embeddings com modelo da Open AI.
 - **Match Semântico de Perfis com Vagas**: Comparação vetorial entre perfis de candidatos e descrições de vagas usando similaridade de embeddings, ranqueando os melhores matches.
 - **Gerenciamento de Workbooks**: Agrupamento de candidatos processados por vaga ou processo seletivo, permitindo curadoria e visualização dos perfis selecionados.
 - **Chat com LLM Integrado**: Permite conversas com um modelo de linguagem para apoiar análise, triagem e recomendações, com histórico de sessões.
@@ -200,6 +200,29 @@ LLM_LOG            # Ativar logs do LLM (true/false)
 OPENAI_API_KEY     # Chave de API OpenAI
 OPENAI_MODEL       # Modelo Open AI 
 ```
+### 🧪 Observações sobre os Modelos de LLM
+
+As variáveis de ambiente relacionadas a **LLMs (Large Language Models)** controlam como o backend executa as funcionalidades de **normalização de currículos**, **normalização de vagas** e **chat com o assistente IA**.
+
+Essas funções são compatíveis com três tipos de provedores de modelo:
+
+- **OpenAI** (API externa)
+- **DeepSeek** (API externa)
+- **Ollama** (execução local de modelos como Gemma)
+
+A variável `LLM_BACKEND` define qual cliente será usado. Com base nessa escolha, os modelos correspondentes são utilizados:
+
+- `openai` → Utiliza `OPENAI_API_KEY` e `OPENAI_MODEL`
+- `deepseek` → Utiliza `DEEPSEEK_API_KEY`
+- `ollama` → Utiliza `OLLAMA_MODEL` executado localmente via `ollama run`
+
+> ⚠️ **Importante**: A função de **embedding semântico de texto** (para match entre currículos e vagas) é sempre feita via **API OpenAI**, utilizando o modelo `text-embedding-3-large`, independente do backend selecionado para normalização ou chat.
+
+Ou seja:
+
+- **Normalização de currículo e vaga** → Depende de `LLM_BACKEND` (Ollama, OpenAI ou DeepSeek)
+- **Chat com assistente** → Também depende de `LLM_BACKEND`
+- **Embeddings para busca semântica** → Sempre via OpenAI (`text-embedding-3-large`)
 
 ## 📄 Licença
 
