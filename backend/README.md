@@ -6,13 +6,19 @@
 
 ## 📋 Descrição
 
-Esta aplicação fornece um conjunto de endpoints RESTful para gerenciar:
+Esta aplicação fornece um conjunto de **endpoints RESTful** que compõem o backend de uma solução inteligente de recrutamento desenvolvida para o desafio **Datathon FIAP**.
 
-- Workbooks (coleções de candidatos agrupados para análise)
-- Vagas (posições abertas ou em andamento)
-- Recrutamento de candidatos processados
-- Match semântico entre candidatos e vagas
-- Histórico e interação via chat com um LLM integrado
+O sistema automatiza etapas críticas do processo de recrutamento da empresa **Decision**, desde o recebimento de dados brutos até a análise semântica para match inteligente entre candidatos e vagas.
+
+Principais funcionalidades:
+
+- **Normalização de Currículos e Vagas com LLMs**: Recebimento de dados brutos em texto livre e transformação em estruturas JSON padronizadas, extraindo informações como experiências, formações, habilidades e requisitos da vaga.
+- **Geração de Texto Semântico e Embeddings**: A partir do JSON padronizado, o sistema gera um texto descritivo semântico usado para criar embeddings vetoriais com modelos como OpenAI, DeepSeek e Ollama.
+- **Match Semântico de Perfis com Vagas**: Comparação vetorial entre perfis de candidatos e descrições de vagas usando similaridade de embeddings, ranqueando os melhores matches.
+- **Gerenciamento de Workbooks**: Agrupamento de candidatos processados por vaga ou processo seletivo, permitindo curadoria e visualização dos perfis selecionados.
+- **Chat com LLM Integrado**: Permite conversas com um modelo de linguagem para apoiar análise, triagem e recomendações, com histórico de sessões.
+- **Análise Contínua de Performance Semântica**: Exposição de métricas e dados analíticos via API para avaliação da eficácia dos matches gerados, com visualização feita no frontend.
+- **Serviço de Dados para Frontend**: Todos os dados estruturados são expostos via API para integração com a interface visual do sistema (frontend em React/Vite).
 
 O objetivo é apoiar o fluxo de recrutamento da empresa Decision, desde o recebimento e processamento de currículos, até a análise semântica e correspondência de prospects.
 
